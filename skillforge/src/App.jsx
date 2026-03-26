@@ -389,8 +389,14 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages, system }),
       });
+  
       const data = await res.json();
-      return data.content?.map(b => b.text || "").join("") || "";
+  
+      if (!res.ok) {
+        throw new Error(data.error || "Request failed");
+      }
+  
+      return data.response || "";
     } catch (e) {
       console.error("AI Error:", e);
       return "Mi scusi, ho perso il filo del discorso. Può ripetere?";
