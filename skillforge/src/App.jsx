@@ -95,7 +95,7 @@ function ScoreRing({ score, size = 100, sw = 6 }) {
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={sw} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={sw} strokeDasharray={ci} strokeDashoffset={off} strokeLinecap="round" style={{ transition: "stroke-dashoffset 1.5s" }} />
-      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central" style={{ transform: "rotate(90deg)", transformOrigin: "center", fill: "white", fontSize: `${size*0.32}px`, fontWeight: 700, fontFamily: "'DM Sans'" }}>{score}</text>
+      <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central" style={{ transform: "rotate(90deg)", transformOrigin: "center", fill: "white", fontSize: `${size*0.32}px`, fontWeight: 700, fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif" }}>{score}</text>
     </svg>
   );
 }
@@ -328,20 +328,20 @@ export default function App() {
 
   // ─── STYLES ───────────────────────────────────────────────
   const S = {
-    app: { minHeight: "100vh", background: `linear-gradient(160deg, ${C.bg1} 0%, ${C.bg2} 50%, ${C.bg1} 100%)`, fontFamily: "'DM Sans', sans-serif", color: C.text },
+    app: { minHeight: "100vh", background: `linear-gradient(160deg, ${C.bg1} 0%, ${C.bg2} 50%, ${C.bg1} 100%)`, , color: C.text },
     wrap: { maxWidth: "900px", margin: "0 auto", padding: "20px", position: "relative", zIndex: 1, opacity: animateIn ? 1 : 0, transform: animateIn ? "translateY(0)" : "translateY(20px)", transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)" },
     logo: { fontSize: "11px", letterSpacing: "6px", textTransform: "uppercase", color: C.muted },
-    h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, #FFF 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
-    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto" }),
-    btnO: { background: "transparent", color: "rgba(255,255,255,0.65)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'" },
+    h1: { fontFamily: "'Avenir Next LT Pro Demi', 'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, #FFF 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif", transition: "all 0.2s", width: full ? "100%" : "auto" }),
+    btnO: { background: "transparent", color: "rgba(255,255,255,0.65)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif" },
     chip: (c) => ({ display: "inline-block", background: c + "20", color: c, padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }),
     glass: { background: C.glass, borderRadius: "16px", padding: "24px", border: `1px solid ${C.border}` },
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "14px", marginTop: "24px" },
-    input: { width: "100%", background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
+    input: { width: "100%", background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif", outline: "none", marginBottom: "12px" },
   };
 
   const CSS = `
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
+    /* Avenir Next LT Pro — served from system/local fonts */
     *{box-sizing:border-box;margin:0;padding:0}body{margin:0}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
     @keyframes pulseGlow{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
@@ -395,7 +395,7 @@ export default function App() {
             <div style={{ display: "flex", marginBottom: "20px", borderRadius: "10px", overflow: "hidden", border: `1px solid ${C.border}` }}>
               {["login", "register"].map(t => (
                 <button key={t} onClick={() => { setAuthScreen(t); setAuthError(""); setPendingMsg(""); }}
-                  style={{ flex: 1, padding: "12px", background: authScreen === t ? `${C.accent}20` : "transparent", color: authScreen === t ? C.accent : C.muted, border: "none", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'" }}>
+                  style={{ flex: 1, padding: "12px", background: authScreen === t ? `${C.accent}20` : "transparent", color: authScreen === t ? C.accent : C.muted, border: "none", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif" }}>
                   {t === "login" ? "Accedi" : "Registrati"}
                 </button>
               ))}
@@ -451,7 +451,7 @@ export default function App() {
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <input type="number" min="1" max="100" value={configLimit}
                       onChange={e => setConfigLimit(e.target.value)}
-                      style={{ width: "70px", background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px 12px", color: C.text, fontSize: "16px", fontFamily: "'DM Sans'", outline: "none", textAlign: "center" }} />
+                      style={{ width: "70px", background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px 12px", color: C.text, fontSize: "16px", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif", outline: "none", textAlign: "center" }} />
                     <button style={{ ...S.btn(C.success), padding: "8px 16px", fontSize: "13px" }}
                       onClick={() => saveConfig(configLimit)}>Salva</button>
                   </div>
@@ -491,7 +491,7 @@ export default function App() {
                       <select
                         value={u.daily_limit != null ? String(u.daily_limit) : ""}
                         onChange={e => setUserLimit(u.id, e.target.value === "" ? null : e.target.value)}
-                        style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "6px 10px", color: C.text, fontSize: "13px", fontFamily: "'DM Sans'", outline: "none", cursor: "pointer" }}>
+                        style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "6px 10px", color: C.text, fontSize: "13px", fontFamily: "'Avenir Next LT Pro', 'Avenir Next', Avenir, sans-serif", outline: "none", cursor: "pointer" }}>
                         <option value="" style={{ background: C.bg2 }}>Default ({globalLimit})</option>
                         {[1,2,3,5,10,15,20,30,50,100].map(n => (
                           <option key={n} value={String(n)} style={{ background: C.bg2 }}>{n}</option>
