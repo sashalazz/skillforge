@@ -97,7 +97,7 @@ function ScoreRing({ score, size = 100, sw = 6 }) {
   const col = score >= 8 ? C.success : score >= 6 ? C.warn : C.danger;
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={sw} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(42,26,14,0.06)" strokeWidth={sw} />
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={col} strokeWidth={sw} strokeDasharray={ci} strokeDashoffset={off} strokeLinecap="round" style={{ transition: "stroke-dashoffset 1.5s" }} />
       <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central" style={{ transform: "rotate(90deg)", transformOrigin: "center", fill: "white", fontSize: `${size*0.32}px`, fontWeight: 700, fontFamily: "'DM Sans'" }}>{score}</text>
     </svg>
@@ -337,17 +337,17 @@ export default function App() {
     logo: { fontSize: "11px", letterSpacing: "6px", textTransform: "uppercase", color: C.muted },
     h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, ${C.text} 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
     btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto" }),
-    btnO: { background: "transparent", color: "rgba(255,255,255,0.65)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'" },
+    btnO: { background: "transparent", color: C.accent, border: `1px solid ${C.accent}55`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'" },
     chip: (c) => ({ display: "inline-block", background: c + "20", color: c, padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }),
-    glass: { background: C.glass, borderRadius: "16px", padding: "24px", border: `1px solid ${C.border}` },
+    glass: { background: "rgba(255,248,240,0.75)", borderRadius: "16px", padding: "24px", border: `1px solid ${C.border}` },
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "14px", marginTop: "24px" },
-    input: { width: "100%", background: "rgba(255,255,255,0.8)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
+    input: { width: "100%", background: "rgba(255,255,255,0.92)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
   };
 
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
     *{box-sizing:border-box;margin:0;padding:0}body{margin:0;background:#FAF7F3;}
-    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(42,26,14,0.08);border-radius:3px}
     @keyframes pulseGlow{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
     @keyframes blink{0%,40%,100%{ry:11}45%,55%{ry:1}}
     @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
@@ -458,7 +458,7 @@ export default function App() {
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <input type="number" min="1" max="100" value={configLimit}
                       onChange={e => setConfigLimit(e.target.value)}
-                      style={{ width: "70px", background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px 12px", color: C.text, fontSize: "16px", fontFamily: "'DM Sans'", outline: "none", textAlign: "center" }} />
+                      style={{ width: "70px", background: "rgba(42,26,14,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px 12px", color: C.text, fontSize: "16px", fontFamily: "'DM Sans'", outline: "none", textAlign: "center" }} />
                     <button style={{ ...S.btn(C.success), padding: "8px 16px", fontSize: "13px" }}
                       onClick={() => saveConfig(configLimit)}>Salva</button>
                   </div>
@@ -498,7 +498,7 @@ export default function App() {
                       <select
                         value={u.daily_limit != null ? String(u.daily_limit) : ""}
                         onChange={e => setUserLimit(u.id, e.target.value === "" ? null : e.target.value)}
-                        style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "6px 10px", color: C.text, fontSize: "13px", fontFamily: "'DM Sans'", outline: "none", cursor: "pointer" }}>
+                        style={{ background: "rgba(42,26,14,0.06)", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "6px 10px", color: C.text, fontSize: "13px", fontFamily: "'DM Sans'", outline: "none", cursor: "pointer" }}>
                         <option value="" style={{ background: C.bg2 }}>Default ({globalLimit})</option>
                         {[1,2,3,5,10,15,20,30,50,100].map(n => (
                           <option key={n} value={String(n)} style={{ background: C.bg2 }}>{n}</option>
@@ -585,7 +585,7 @@ export default function App() {
           <h2 style={{ ...S.h1, fontSize: "clamp(22px,4vw,32px)", marginTop: "10px" }}>{selectedScenario.title}</h2>
           <div style={{ ...S.glass, marginTop: "20px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "8px" }}>Scenario</div>
-            <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(255,255,255,0.65)" }}>{selectedScenario.brief}</p>
+            <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(42,26,14,0.65)" }}>{selectedScenario.brief}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "12px" }}>
             <div style={{ background: `${C.accent}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.accent}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Il tuo ruolo</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{selectedScenario.role_user}</div></div>
@@ -608,7 +608,7 @@ export default function App() {
             {selectedScenario.tips.map((t, i) => (
               <div key={i} style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
                 <div style={{ minWidth: "22px", height: "22px", borderRadius: "50%", background: `${C.accent}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700, color: C.accent }}>{i + 1}</div>
-                <div style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(255,255,255,0.5)" }}>{t}</div>
+                <div style={{ fontSize: "13px", lineHeight: 1.5, color: "rgba(42,26,14,0.5)" }}>{t}</div>
               </div>
             ))}
           </div>
@@ -647,9 +647,9 @@ export default function App() {
             <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, window.innerWidth * 0.4)} />
             <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{selectedScenario.role_ai}</div>
             <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>{isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : turnCount === 0 ? "In attesa..." : "In ascolto"}</div>
-            {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(255,255,255,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{lastAiText}</div>}
-            {currentTranscript && <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(255,255,255,0.5)", fontStyle: "italic", textAlign: "center" }}>{currentTranscript}</div>}
-            {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(255,255,255,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{selectedScenario.role_user}</span></div>}
+            {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{lastAiText}</div>}
+            {currentTranscript && <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(42,26,14,0.5)", fontStyle: "italic", textAlign: "center" }}>{currentTranscript}</div>}
+            {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(42,26,14,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{selectedScenario.role_user}</span></div>}
           </div>
           <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 0 4px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
@@ -659,7 +659,7 @@ export default function App() {
             {inputMode === "voice" ? (
               <div style={{ textAlign: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "2px", height: "28px" }}>
-                  {Array.from({ length: 18 }).map((_, i) => <div key={i} style={{ width: "3px", borderRadius: "2px", background: isListening ? `linear-gradient(to top, ${C.danger}, ${C.accent})` : "rgba(255,255,255,0.06)", height: isListening ? undefined : "4px", animation: isListening ? "wave 1.2s ease-in-out infinite" : "none", animationDelay: `${i * 0.05}s` }} />)}
+                  {Array.from({ length: 18 }).map((_, i) => <div key={i} style={{ width: "3px", borderRadius: "2px", background: isListening ? `linear-gradient(to top, ${C.danger}, ${C.accent})` : "rgba(42,26,14,0.06)", height: isListening ? undefined : "4px", animation: isListening ? "wave 1.2s ease-in-out infinite" : "none", animationDelay: `${i * 0.05}s` }} />)}
                 </div>
                 <div style={{ marginTop: "8px" }}>
                   {!isListening ? <button style={{ ...S.btn(C.accent), borderRadius: "50%", width: "56px", height: "56px", fontSize: "20px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={startListening} disabled={isThinking || isSpeaking}>🎤</button>
@@ -698,38 +698,38 @@ export default function App() {
               <div style={{ ...S.glass, textAlign: "center", marginBottom: "14px", padding: "28px" }}>
                 <ScoreRing score={report.overall_score} size={120} sw={8} />
                 <div style={{ fontSize: "12px", color: C.muted, marginTop: "10px", letterSpacing: "2px", textTransform: "uppercase" }}>Punteggio</div>
-                <p style={{ fontSize: "14px", color: "rgba(255,255,255,0.6)", lineHeight: 1.7, marginTop: "10px" }}>{report.summary}</p>
+                <p style={{ fontSize: "14px", color: "rgba(42,26,14,0.6)", lineHeight: 1.7, marginTop: "10px" }}>{report.summary}</p>
               </div>
               <div style={{ ...S.glass, marginBottom: "14px" }}>
                 <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "16px" }}>Criteri</div>
                 {report.scores.map((s, i) => { const col = s.score >= 8 ? C.success : s.score >= 6 ? C.warn : C.danger; return (
                   <div key={i} style={{ marginBottom: "14px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}><span style={{ fontSize: "13px", fontWeight: 600 }}>{s.criterion}</span><span style={{ fontSize: "13px", fontWeight: 700, color: col }}>{s.score}/10</span></div>
-                    <div style={{ height: "3px", borderRadius: "2px", background: "rgba(255,255,255,0.06)", overflow: "hidden", marginBottom: "5px" }}><div style={{ width: `${s.score * 10}%`, height: "100%", background: col, transition: "width 1.5s" }} /></div>
-                    <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{s.comment}</div>
+                    <div style={{ height: "3px", borderRadius: "2px", background: "rgba(42,26,14,0.06)", overflow: "hidden", marginBottom: "5px" }}><div style={{ width: `${s.score * 10}%`, height: "100%", background: col, transition: "width 1.5s" }} /></div>
+                    <div style={{ fontSize: "12px", color: "rgba(42,26,14,0.4)", lineHeight: 1.5 }}>{s.comment}</div>
                   </div>
                 ); })}
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "14px" }}>
                 <div style={{ background: `${C.success}0D`, borderRadius: "14px", padding: "16px", border: `1px solid ${C.success}20` }}>
                   <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.success, marginBottom: "10px" }}>✓ Forza</div>
-                  {report.strengths.map((s, i) => <div key={i} style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", lineHeight: 1.5, marginBottom: "6px", paddingLeft: "10px", borderLeft: `2px solid ${C.success}33` }}>{s}</div>)}
+                  {report.strengths.map((s, i) => <div key={i} style={{ fontSize: "12px", color: "rgba(42,26,14,0.55)", lineHeight: 1.5, marginBottom: "6px", paddingLeft: "10px", borderLeft: `2px solid ${C.success}33` }}>{s}</div>)}
                 </div>
                 <div style={{ background: `${C.danger}0D`, borderRadius: "14px", padding: "16px", border: `1px solid ${C.danger}20` }}>
                   <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.danger, marginBottom: "10px" }}>↑ Migliorare</div>
-                  {report.improvements.map((s, i) => <div key={i} style={{ fontSize: "12px", color: "rgba(255,255,255,0.55)", lineHeight: 1.5, marginBottom: "6px", paddingLeft: "10px", borderLeft: `2px solid ${C.danger}33` }}>{s}</div>)}
+                  {report.improvements.map((s, i) => <div key={i} style={{ fontSize: "12px", color: "rgba(42,26,14,0.55)", lineHeight: 1.5, marginBottom: "6px", paddingLeft: "10px", borderLeft: `2px solid ${C.danger}33` }}>{s}</div>)}
                 </div>
               </div>
               {[{ key: "key_moment", icon: "⚡", label: "Momento Chiave", col: C.accent }, { key: "mistake_to_avoid", icon: "🚫", label: "Errore da Evitare", col: C.danger }, { key: "better_phrase", icon: "💬", label: "Come Dirlo Meglio", col: C.success }]
                 .filter(x => report[x.key]).map(x => (
                 <div key={x.key} style={{ background: `${x.col}0A`, borderRadius: "12px", padding: "16px", border: `1px solid ${x.col}18`, marginBottom: "10px" }}>
                   <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: x.col, marginBottom: "6px" }}>{x.icon} {x.label}</div>
-                  <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>{report[x.key]}</div>
+                  <div style={{ fontSize: "13px", color: "rgba(42,26,14,0.6)", lineHeight: 1.6 }}>{report[x.key]}</div>
                 </div>
               ))}
               <div style={{ background: `linear-gradient(135deg, ${C.accent}12, ${C.teal}12)`, borderRadius: "12px", padding: "16px", border: `1px solid ${C.border}`, marginBottom: "20px" }}>
                 <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>🎓 Consiglio</div>
-                <div style={{ fontSize: "14px", color: "rgba(255,255,255,0.7)", lineHeight: 1.7, fontStyle: "italic" }}>"{report.academy_tip}"</div>
+                <div style={{ fontSize: "14px", color: "rgba(42,26,14,0.7)", lineHeight: 1.7, fontStyle: "italic" }}>"{report.academy_tip}"</div>
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 <button style={{ ...S.btn(C.accent), flex: 1 }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); nav("roleplay"); }}>🔄 Riprova</button>
