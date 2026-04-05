@@ -74,306 +74,527 @@ function Avatar({ speaking, thinking, size = 180 }) {
   const [headX, setHeadX] = useState(0);
   const [headY, setHeadY] = useState(0);
   const [breathe, setBreathe] = useState(false);
+  const [pupilOff, setPupilOff] = useState({ x: 0, y: 0 });
+  const [browLift, setBrowLift] = useState(0);
+  const [smileW, setSmileW] = useState(0);
   const phaseRef = useRef(0);
 
-  // Mouth animation phases when speaking
+  // Mouth animation phases when speaking — more varied and natural
   useEffect(() => {
-    if (!speaking) { setPhase(0); return; }
-    const shapes = [0,1,2,3,2,1,0,2,3,1,0,2,1,3];
+    if (!speaking) { setPhase(0); setSmileW(0.3); return; }
+    const shapes = [0,1,2,3,2,1,0,2,3,1,0,3,2,1,3,0,1,2];
     let i = 0;
     const iv = setInterval(() => {
       i = (i + 1) % shapes.length;
       setPhase(shapes[i]);
       phaseRef.current = shapes[i];
-    }, 110 + Math.random() * 60);
+      setSmileW(0.05 + Math.random() * 0.15);
+    }, 90 + Math.random() * 80);
     return () => clearInterval(iv);
   }, [speaking]);
 
-  // Naturalistic blinking
+  // Naturalistic blinking — double blink sometimes
   useEffect(() => {
+    let mounted = true;
     const scheduleBlink = () => {
-      const delay = 2500 + Math.random() * 4000;
+      const delay = 2000 + Math.random() * 4500;
       return setTimeout(() => {
+        if (!mounted) return;
         setBlinkT(true);
-        setTimeout(() => { setBlinkT(false); scheduleBlink(); }, 120);
+        setTimeout(() => {
+          if (!mounted) return;
+          setBlinkT(false);
+          // 20% chance of double blink
+          if (Math.random() < 0.2) {
+            setTimeout(() => {
+              if (!mounted) return;
+              setBlinkT(true);
+              setTimeout(() => { if (mounted) { setBlinkT(false); scheduleBlink(); } }, 100);
+            }, 180);
+          } else {
+            scheduleBlink();
+          }
+        }, 110);
       }, delay);
     };
     const t = scheduleBlink();
-    return () => clearTimeout(t);
+    return () => { mounted = false; clearTimeout(t); };
   }, []);
 
-  // Subtle head micro-movements
+  // Subtle head micro-movements — smoother interpolation
   useEffect(() => {
     const iv = setInterval(() => {
       if (speaking) {
-        setHeadX((Math.random() - 0.5) * 3);
-        setHeadY((Math.random() - 0.5) * 2);
+        setHeadX(p => p * 0.6 + (Math.random() - 0.5) * 3.5 * 0.4);
+        setHeadY(p => p * 0.6 + (Math.random() - 0.5) * 2.5 * 0.4);
+        setBrowLift(Math.random() * 2);
       } else if (thinking) {
-        setHeadX(-2 + Math.random() * 1);
-        setHeadY(-1);
+        setHeadX(p => p * 0.7 + (-2.5 + Math.random()) * 0.3);
+        setHeadY(p => p * 0.7 + (-1.5) * 0.3);
+        setBrowLift(1.5 + Math.random());
       } else {
-        setHeadX(p => p * 0.85 + (Math.random() - 0.5) * 0.5);
-        setHeadY(p => p * 0.85);
+        setHeadX(p => p * 0.88 + (Math.random() - 0.5) * 0.4);
+        setHeadY(p => p * 0.88 + (Math.random() - 0.5) * 0.2);
+        setBrowLift(p => p * 0.85);
       }
-    }, 300);
+    }, 250);
     return () => clearInterval(iv);
   }, [speaking, thinking]);
 
-  // Breathing animation
+  // Pupil movement — eyes look around naturally
   useEffect(() => {
-    const iv = setInterval(() => setBreathe(p => !p), 2200);
+    const iv = setInterval(() => {
+      if (speaking) {
+        setPupilOff({ x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 2.5 });
+      } else if (thinking) {
+        setPupilOff({ x: -2 + Math.random() * 1.5, y: -2 + Math.random() });
+      } else {
+        setPupilOff(p => ({ x: p.x * 0.7 + (Math.random() - 0.5) * 1.2, y: p.y * 0.7 + (Math.random() - 0.5) * 0.8 }));
+      }
+    }, 600 + Math.random() * 400);
+    return () => clearInterval(iv);
+  }, [speaking, thinking]);
+
+  // Breathing animation — continuous
+  useEffect(() => {
+    const iv = setInterval(() => setBreathe(p => !p), 2400);
     return () => clearInterval(iv);
   }, []);
 
-  const s = size / 200;
-  const glowCol = speaking ? `${C.accent}55` : thinking ? `${C.teal}44` : "rgba(180,80,20,0.08)";
+  const glowCol = speaking ? `${C.accent}55` : thinking ? `${C.teal}44` : "rgba(180,80,20,0.06)";
 
-  // Mouth shapes: [outerRy, innerRy, width, cornerY]
+  // Mouth shapes with more variety
   const MOUTHS = [
-    { ow: 18, oh: 4, iw: 14, ih: 0, cy: 0 },   // 0: closed smile
-    { ow: 20, oh: 9, iw: 16, ih: 6, cy: 1 },    // 1: open small
-    { ow: 22, oh: 14, iw: 18, ih: 10, cy: 2 },  // 2: open medium
-    { ow: 24, oh: 18, iw: 19, ih: 14, cy: 2 },  // 3: open wide
+    { ow: 17, oh: 3.5, iw: 13, ih: 0, cy: 0 },   // 0: closed/subtle smile
+    { ow: 19, oh: 8, iw: 15, ih: 5, cy: 0.8 },     // 1: open small
+    { ow: 21, oh: 13, iw: 17, ih: 9, cy: 1.5 },    // 2: open medium
+    { ow: 23, oh: 17, iw: 18, ih: 13, cy: 2 },     // 3: open wide
   ];
   const mp = MOUTHS[speaking ? phase : 0];
-  const eyeRy = blinkT ? 1 : (thinking ? 8 : 11);
+  const eyeRy = blinkT ? 0.8 : (thinking ? 9 : 11.5);
+
+  // Dynamic iris size — slightly larger when speaking/engaged
+  const irisR = Math.min(10.5, eyeRy * 0.95) + (speaking ? 0.3 : 0);
+  const pupilR = Math.min(5.2, eyeRy * 0.5) + (thinking ? -0.5 : speaking ? 0.4 : 0);
 
   return (
     <div style={{ position: "relative", width: size, height: size, margin: "0 auto" }}>
-      {/* Glow halo */}
+      {/* Ambient glow */}
       <div style={{
-        position: "absolute", inset: -28, borderRadius: "50%",
-        background: `radial-gradient(circle, ${glowCol} 0%, transparent 65%)`,
-        transition: "all 0.6s ease",
-        animation: speaking ? "pulseGlow 1.8s ease-in-out infinite" : "none"
+        position: "absolute", inset: -32, borderRadius: "50%",
+        background: `radial-gradient(circle, ${glowCol} 0%, transparent 60%)`,
+        transition: "all 0.8s ease",
+        animation: speaking ? "pulseGlow 2s ease-in-out infinite" : "none"
       }} />
 
       <svg viewBox="0 0 200 240" width={size} height={size * 1.2}
-        style={{ position: "relative", zIndex: 1, transition: "transform 0.25s ease",
+        style={{ position: "relative", zIndex: 1, transition: "transform 0.3s cubic-bezier(0.25,0.1,0.25,1)",
           transform: `translate(${headX}px, ${headY}px)` }}>
         <defs>
-          <radialGradient id="skinGrad" cx="45%" cy="38%" r="60%">
-            <stop offset="0%" stopColor="#F5DEC8" />
-            <stop offset="55%" stopColor="#E8C9A8" />
+          {/* Skin gradients — multi-layered for subsurface scattering effect */}
+          <radialGradient id="skinBase" cx="42%" cy="36%" r="62%">
+            <stop offset="0%" stopColor="#FAE8D5" />
+            <stop offset="30%" stopColor="#F2D8BE" />
+            <stop offset="60%" stopColor="#E8C9A8" />
             <stop offset="100%" stopColor="#D4A882" />
           </radialGradient>
-          <radialGradient id="skinShadow" cx="50%" cy="50%" r="50%">
-            <stop offset="60%" stopColor="transparent" />
-            <stop offset="100%" stopColor="rgba(120,70,30,0.18)" />
-          </radialGradient>
-          <radialGradient id="eyeGrad" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#5C3A1E" />
-            <stop offset="100%" stopColor="#1A0A02" />
-          </radialGradient>
-          <radialGradient id="irisGrad" cx="35%" cy="30%" r="65%">
-            <stop offset="0%" stopColor="#7A5C3A" />
-            <stop offset="60%" stopColor="#4A2E10" />
-            <stop offset="100%" stopColor="#1A0800" />
-          </radialGradient>
-          <radialGradient id="hairGrad" cx="50%" cy="0%" r="70%">
-            <stop offset="0%" stopColor="#3D2408" />
-            <stop offset="100%" stopColor="#1A0C03" />
-          </radialGradient>
-          <radialGradient id="cheekGrad" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(220,120,80,0.28)" />
+          <radialGradient id="skinWarm" cx="55%" cy="55%" r="50%">
+            <stop offset="0%" stopColor="rgba(240,160,120,0.12)" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
+          <radialGradient id="skinShadow" cx="50%" cy="50%" r="50%">
+            <stop offset="55%" stopColor="transparent" />
+            <stop offset="85%" stopColor="rgba(130,75,30,0.12)" />
+            <stop offset="100%" stopColor="rgba(100,55,20,0.22)" />
+          </radialGradient>
+          <radialGradient id="skinHighlight" cx="38%" cy="30%" r="45%">
+            <stop offset="0%" stopColor="rgba(255,245,235,0.35)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+
+          {/* Eye gradients — richer iris */}
+          <radialGradient id="irisGrad" cx="38%" cy="32%" r="60%">
+            <stop offset="0%" stopColor="#8B6D42" />
+            <stop offset="35%" stopColor="#6A4E28" />
+            <stop offset="70%" stopColor="#4A2E10" />
+            <stop offset="100%" stopColor="#1A0800" />
+          </radialGradient>
+          <radialGradient id="irisInner" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(180,140,80,0.4)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+          <radialGradient id="scleraGrad" cx="50%" cy="40%" r="55%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="70%" stopColor="#F8F4F0" />
+            <stop offset="100%" stopColor="#EDE5DC" />
+          </radialGradient>
+
+          {/* Hair — richer multi-tone */}
+          <radialGradient id="hairBase" cx="50%" cy="0%" r="75%">
+            <stop offset="0%" stopColor="#4A3010" />
+            <stop offset="40%" stopColor="#3A2208" />
+            <stop offset="100%" stopColor="#1A0C03" />
+          </radialGradient>
+          <linearGradient id="hairShine" x1="30%" y1="0%" x2="70%" y2="100%">
+            <stop offset="0%" stopColor="rgba(120,80,40,0.25)" />
+            <stop offset="50%" stopColor="rgba(180,130,70,0.15)" />
+            <stop offset="100%" stopColor="transparent" />
+          </linearGradient>
+
+          {/* Cheek blush — softer, more realistic */}
+          <radialGradient id="cheekL" cx="50%" cy="45%" r="50%">
+            <stop offset="0%" stopColor="rgba(210,110,85,0.22)" />
+            <stop offset="60%" stopColor="rgba(200,100,75,0.10)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+          <radialGradient id="cheekR" cx="50%" cy="45%" r="50%">
+            <stop offset="0%" stopColor="rgba(210,110,85,0.22)" />
+            <stop offset="60%" stopColor="rgba(200,100,75,0.10)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
+
           <linearGradient id="neckGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#D4A882" />
+            <stop offset="0%" stopColor="#D8AD8A" />
             <stop offset="100%" stopColor="#C49070" />
           </linearGradient>
           <linearGradient id="shirtGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#3A5080" />
             <stop offset="100%" stopColor="#253660" />
           </linearGradient>
-          <filter id="softBlur">
-            <feGaussianBlur stdDeviation="0.5" />
+          <linearGradient id="shirtFold" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.12)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.08)" />
+          </linearGradient>
+
+          {/* Lip gradient */}
+          <linearGradient id="upperLip" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#C87A60" />
+            <stop offset="100%" stopColor="#B86A52" />
+          </linearGradient>
+          <linearGradient id="lowerLip" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#C06850" />
+            <stop offset="100%" stopColor="#A85A44" />
+          </linearGradient>
+
+          <filter id="softBlur"><feGaussianBlur stdDeviation="0.6" /></filter>
+          <filter id="skinBlur"><feGaussianBlur stdDeviation="1.2" /></filter>
+          <filter id="hairShadow">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="rgba(20,10,0,0.15)" />
           </filter>
-          <clipPath id="headClip">
-            <ellipse cx="100" cy="105" rx="75" ry="88" />
+          <clipPath id="headClip"><ellipse cx="100" cy="105" rx="75" ry="88" /></clipPath>
+          <clipPath id="mouthClip">
+            <ellipse cx="100" cy={148 + mp.oh * 0.5} rx={mp.ow - 1} ry={mp.oh * 0.85 + 1} />
           </clipPath>
         </defs>
 
-        {/* Shirt / body */}
-        <ellipse cx="100" cy="230" rx="70" ry="30" fill="url(#shirtGrad)" />
-        <path d="M 40 210 Q 55 195 70 192 Q 85 215 100 218 Q 115 215 130 192 Q 145 195 160 210 L 165 240 L 35 240 Z"
+        {/* === BODY / SHIRT === */}
+        <ellipse cx="100" cy="232" rx="72" ry="30" fill="url(#shirtGrad)" />
+        <path d="M 38 212 Q 52 196 68 192 Q 84 214 100 217 Q 116 214 132 192 Q 148 196 162 212 L 167 240 L 33 240 Z"
           fill="url(#shirtGrad)" />
+        {/* Shirt fabric folds */}
+        <path d="M 38 212 Q 52 196 68 192 Q 84 214 100 217 Q 116 214 132 192 Q 148 196 162 212 L 167 240 L 33 240 Z"
+          fill="url(#shirtFold)" />
+        {/* Collar detail — V-neck with shadow */}
+        <path d="M 80 192 L 100 210 L 120 192 L 114 186 Q 100 196 86 186 Z"
+          fill="#E8E4E0" />
+        <path d="M 82 191 L 100 207 L 118 191" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="1" />
+        {/* Collar shadow */}
+        <path d="M 80 192 L 100 210 L 120 192" fill="none" stroke="rgba(80,50,20,0.12)" strokeWidth="2.5" strokeLinecap="round" />
 
-        {/* Collar / shirt top detail */}
-        <path d="M 82 192 L 100 208 L 118 192 L 112 186 Q 100 194 88 186 Z"
-          fill="white" opacity="0.9" />
+        {/* === NECK === */}
+        <path d="M 82 186 L 80 198 Q 90 204 100 205 Q 110 204 120 198 L 118 186"
+          fill="url(#neckGrad)" />
+        {/* Neck shadow under chin */}
+        <ellipse cx="100" cy="190" rx="22" ry="6" fill="rgba(120,65,25,0.18)" filter="url(#softBlur)" />
+        {/* Adam's apple hint */}
+        <path d="M 99 194 Q 100 196 101 194" fill="none" stroke="rgba(160,100,50,0.15)" strokeWidth="1" strokeLinecap="round" />
 
-        {/* Neck */}
-        <ellipse cx="100" cy="195" rx="18" ry="14" fill="url(#neckGrad)" />
-        <rect x="82" y="188" width="36" height="20" fill="url(#neckGrad)" rx="2" />
+        {/* === HEAD BASE — multi-layer skin === */}
+        <ellipse cx="100" cy="105" rx="75" ry="88" fill="url(#skinBase)" />
+        {/* Warmth layer */}
+        <ellipse cx="100" cy="115" rx="65" ry="70" fill="url(#skinWarm)" />
+        {/* Highlight on forehead/cheek */}
+        <ellipse cx="100" cy="105" rx="75" ry="88" fill="url(#skinHighlight)" />
 
-        {/* Head base */}
-        <ellipse cx="100" cy="105" rx="75" ry="88" fill="url(#skinGrad)" />
+        {/* === EARS — more detailed === */}
+        {/* Left ear */}
+        <ellipse cx="27" cy="110" rx="11.5" ry="17" fill="#D8AD8A" />
+        <ellipse cx="29" cy="110" rx="7.5" ry="12" fill="#CCA080" />
+        <path d="M 30 100 Q 25 107 26 114 Q 27 118 30 120" fill="none" stroke="#B8855C" strokeWidth="1.3" strokeLinecap="round" />
+        <ellipse cx="28" cy="117" rx="3" ry="2.5" fill="rgba(180,120,70,0.2)" />
+        {/* Right ear */}
+        <ellipse cx="173" cy="110" rx="11.5" ry="17" fill="#D8AD8A" />
+        <ellipse cx="171" cy="110" rx="7.5" ry="12" fill="#CCA080" />
+        <path d="M 170 100 Q 175 107 174 114 Q 173 118 170 120" fill="none" stroke="#B8855C" strokeWidth="1.3" strokeLinecap="round" />
+        <ellipse cx="172" cy="117" rx="3" ry="2.5" fill="rgba(180,120,70,0.2)" />
 
-        {/* Ear left */}
-        <ellipse cx="27" cy="110" rx="11" ry="16" fill="#D4A882" />
-        <ellipse cx="29" cy="110" rx="7" ry="11" fill="#C49070" />
-        <path d="M 29 102 Q 26 110 29 118" fill="none" stroke="#B07850" strokeWidth="1.5" strokeLinecap="round" />
+        {/* === HAIR — multi-layered with volume === */}
+        <g filter="url(#hairShadow)">
+          <ellipse cx="100" cy="26" rx="77" ry="40" fill="url(#hairBase)" />
+          <path d="M 24 98 Q 20 68 26 42 Q 42 5 100 7 Q 158 5 174 42 Q 180 68 176 98"
+            fill="url(#hairBase)" />
+        </g>
+        {/* Hair volume/highlight layer */}
+        <path d="M 26 92 Q 22 65 28 42 Q 45 8 100 10 Q 155 8 172 42 Q 178 65 174 92"
+          fill="url(#hairShine)" />
+        {/* Individual hair strand highlights */}
+        <path d="M 38 32 Q 52 16 78 14" fill="none" stroke="rgba(140,100,50,0.12)" strokeWidth="3" strokeLinecap="round" />
+        <path d="M 162 32 Q 148 16 122 14" fill="none" stroke="rgba(140,100,50,0.12)" strokeWidth="3" strokeLinecap="round" />
+        <path d="M 44 42 Q 56 28 72 22" fill="none" stroke="rgba(120,85,40,0.08)" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M 156 42 Q 144 28 128 22" fill="none" stroke="rgba(120,85,40,0.08)" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M 30 60 Q 34 46 48 36" fill="none" stroke="rgba(160,120,60,0.06)" strokeWidth="2" strokeLinecap="round" />
+        <path d="M 170 60 Q 166 46 152 36" fill="none" stroke="rgba(160,120,60,0.06)" strokeWidth="2" strokeLinecap="round" />
+        {/* Temple hair shadow */}
+        <path d="M 30 75 Q 35 68 42 65" fill="none" stroke="rgba(30,15,5,0.15)" strokeWidth="4" strokeLinecap="round" />
+        <path d="M 170 75 Q 165 68 158 65" fill="none" stroke="rgba(30,15,5,0.15)" strokeWidth="4" strokeLinecap="round" />
+        {/* Side hair wisps */}
+        <path d="M 27 88 Q 28 80 32 72" fill="none" stroke="rgba(50,30,10,0.2)" strokeWidth="3" strokeLinecap="round" />
+        <path d="M 173 88 Q 172 80 168 72" fill="none" stroke="rgba(50,30,10,0.2)" strokeWidth="3" strokeLinecap="round" />
 
-        {/* Ear right */}
-        <ellipse cx="173" cy="110" rx="11" ry="16" fill="#D4A882" />
-        <ellipse cx="171" cy="110" rx="7" ry="11" fill="#C49070" />
-        <path d="M 171 102 Q 174 110 171 118" fill="none" stroke="#B07850" strokeWidth="1.5" strokeLinecap="round" />
+        {/* Forehead shadow (from hair) */}
+        <ellipse cx="100" cy="56" rx="62" ry="18" fill="rgba(100,50,15,0.08)" filter="url(#skinBlur)" />
 
-        {/* Hair */}
-        <ellipse cx="100" cy="28" rx="75" ry="38" fill="url(#hairGrad)" />
-        <path d="M 26 95 Q 22 65 28 42 Q 45 8 100 10 Q 155 8 172 42 Q 178 65 174 95"
-          fill="url(#hairGrad)" />
-        {/* Hair detail strands */}
-        <path d="M 40 35 Q 55 20 80 18" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M 160 35 Q 145 20 120 18" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" strokeLinecap="round" />
-        <path d="M 30 58 Q 35 45 50 38" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" strokeLinecap="round" />
-        <path d="M 170 58 Q 165 45 150 38" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="2" strokeLinecap="round" />
+        {/* === EYEBROWS — hair-like strokes === */}
+        {/* Left brow */}
+        <g style={{ transition: "transform 0.3s ease", transform: `translateY(${-browLift * 0.6}px)` }}>
+          <path d={thinking ? "M 56 76 Q 65 70 74 69 Q 82 70 89 73" : "M 56 74 Q 65 68 74 67 Q 82 68 89 72"}
+            fill="none" stroke="#2E1C0E" strokeWidth="3" strokeLinecap="round" />
+          <path d={thinking ? "M 58 77 Q 66 72 73 71" : "M 58 75 Q 66 70 73 69"}
+            fill="none" stroke="#3A2412" strokeWidth="1.8" strokeLinecap="round" />
+          <path d={thinking ? "M 74 71 Q 81 72 87 74" : "M 74 69 Q 81 70 87 73"}
+            fill="none" stroke="#3A2412" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Brow shadow */}
+          <path d={thinking ? "M 56 76 Q 72 69 89 73" : "M 56 74 Q 72 67 89 72"}
+            fill="none" stroke="rgba(42,26,14,0.1)" strokeWidth="6" strokeLinecap="round" filter="url(#softBlur)" />
+        </g>
+        {/* Right brow */}
+        <g style={{ transition: "transform 0.3s ease", transform: `translateY(${-browLift * 0.6}px)` }}>
+          <path d={thinking ? "M 111 73 Q 118 70 126 69 Q 135 70 144 76" : "M 111 72 Q 118 68 126 67 Q 135 68 144 74"}
+            fill="none" stroke="#2E1C0E" strokeWidth="3" strokeLinecap="round" />
+          <path d={thinking ? "M 113 74 Q 120 72 127 71" : "M 113 73 Q 120 70 127 69"}
+            fill="none" stroke="#3A2412" strokeWidth="1.8" strokeLinecap="round" />
+          <path d={thinking ? "M 127 71 Q 134 72 142 76" : "M 127 69 Q 134 70 142 74"}
+            fill="none" stroke="#3A2412" strokeWidth="1.5" strokeLinecap="round" />
+          <path d={thinking ? "M 111 73 Q 128 69 144 76" : "M 111 72 Q 128 67 144 74"}
+            fill="none" stroke="rgba(42,26,14,0.1)" strokeWidth="6" strokeLinecap="round" filter="url(#softBlur)" />
+        </g>
 
-        {/* Forehead shadow */}
-        <ellipse cx="100" cy="58" rx="60" ry="20" fill="rgba(120,60,20,0.06)" filter="url(#softBlur)" />
+        {/* === EYE SOCKETS — deeper, more defined === */}
+        <ellipse cx="73" cy="97" rx="19" ry="15" fill="rgba(100,50,15,0.07)" filter="url(#softBlur)" />
+        <ellipse cx="127" cy="97" rx="19" ry="15" fill="rgba(100,50,15,0.07)" filter="url(#softBlur)" />
 
-        {/* Eyebrows */}
-        <path d={thinking
-          ? "M 58 77 Q 73 71 88 74"
-          : "M 58 75 Q 73 69 88 73"}
-          fill="none" stroke="#2A1A0E" strokeWidth="3.5" strokeLinecap="round" />
-        <path d={thinking
-          ? "M 112 74 Q 127 71 142 77"
-          : "M 112 73 Q 127 69 142 75"}
-          fill="none" stroke="#2A1A0E" strokeWidth="3.5" strokeLinecap="round" />
-        {/* Eyebrow shading */}
-        <path d={thinking ? "M 58 77 Q 73 71 88 74" : "M 58 75 Q 73 69 88 73"}
-          fill="none" stroke="rgba(42,26,14,0.15)" strokeWidth="5" strokeLinecap="round" />
-        <path d={thinking ? "M 112 74 Q 127 71 142 77" : "M 112 73 Q 127 69 142 75"}
-          fill="none" stroke="rgba(42,26,14,0.15)" strokeWidth="5" strokeLinecap="round" />
-
-        {/* Eye sockets shadow */}
-        <ellipse cx="73" cy="97" rx="18" ry="14" fill="rgba(100,50,15,0.09)" />
-        <ellipse cx="127" cy="97" rx="18" ry="14" fill="rgba(100,50,15,0.09)" />
-
-        {/* Eye whites */}
-        <ellipse cx="73" cy="97" rx="16" ry={eyeRy} fill="white" style={{ transition: "ry 0.08s" }} />
-        <ellipse cx="127" cy="97" rx="16" ry={eyeRy} fill="white" style={{ transition: "ry 0.08s" }} />
-        {/* Eye shadow top */}
-        <ellipse cx="73" cy={97 - eyeRy * 0.4} rx="16" ry={eyeRy * 0.4} fill="rgba(100,50,10,0.12)" style={{ transition: "ry 0.08s" }} />
-        <ellipse cx="127" cy={97 - eyeRy * 0.4} rx="16" ry={eyeRy * 0.4} fill="rgba(100,50,10,0.12)" style={{ transition: "ry 0.08s" }} />
-
-        {/* Irises */}
-        {eyeRy > 3 && <>
-          <ellipse cx="73" cy="97" rx={Math.min(10, eyeRy * 0.95)} ry={Math.min(10, eyeRy * 0.95)} fill="url(#irisGrad)" />
-          <ellipse cx="127" cy="97" rx={Math.min(10, eyeRy * 0.95)} ry={Math.min(10, eyeRy * 0.95)} fill="url(#irisGrad)" />
-          {/* Pupils */}
-          <circle cx="73" cy="97" r={Math.min(5.5, eyeRy * 0.52)} fill="#050200" />
-          <circle cx="127" cy="97" r={Math.min(5.5, eyeRy * 0.52)} fill="#050200" />
-          {/* Eye shine */}
-          <circle cx="76" cy="93" r="2.5" fill="rgba(255,255,255,0.88)" />
-          <circle cx="130" cy="93" r="2.5" fill="rgba(255,255,255,0.88)" />
-          <circle cx="69" cy="99" r="1.2" fill="rgba(255,255,255,0.45)" />
-          <circle cx="123" cy="99" r="1.2" fill="rgba(255,255,255,0.45)" />
-          {/* Thinking dot */}
-          {thinking && <circle cx="78" cy="95" r="2" fill="rgba(122,92,58,0.5)" />}
-          {thinking && <circle cx="132" cy="95" r="2" fill="rgba(122,92,58,0.5)" />}
+        {/* === EYES — highly detailed === */}
+        {/* Sclera with subtle veining */}
+        <ellipse cx="73" cy="97" rx="16.5" ry={eyeRy} fill="url(#scleraGrad)" style={{ transition: "ry 0.09s ease" }} />
+        <ellipse cx="127" cy="97" rx="16.5" ry={eyeRy} fill="url(#scleraGrad)" style={{ transition: "ry 0.09s ease" }} />
+        {/* Subtle pink corners */}
+        {eyeRy > 5 && <>
+          <ellipse cx="57" cy="97" rx="3" ry="4" fill="rgba(210,150,140,0.3)" />
+          <ellipse cx="143" cy="97" rx="3" ry="4" fill="rgba(210,150,140,0.3)" />
         </>}
 
-        {/* Eyelids top */}
-        <path d={`M 57 ${97 - eyeRy} Q 73 ${90 - eyeRy * 0.3} 89 ${97 - eyeRy}`}
-          fill="none" stroke="#C49070" strokeWidth="1.5" strokeLinecap="round" style={{ transition: "all 0.08s" }} />
-        <path d={`M 111 ${97 - eyeRy} Q 127 ${90 - eyeRy * 0.3} 143 ${97 - eyeRy}`}
-          fill="none" stroke="#C49070" strokeWidth="1.5" strokeLinecap="round" style={{ transition: "all 0.08s" }} />
+        {/* Upper eye shadow — depth */}
+        <ellipse cx="73" cy={97 - eyeRy * 0.35} rx="16.5" ry={eyeRy * 0.45} fill="rgba(90,45,10,0.14)" style={{ transition: "all 0.09s" }} />
+        <ellipse cx="127" cy={97 - eyeRy * 0.35} rx="16.5" ry={eyeRy * 0.45} fill="rgba(90,45,10,0.14)" style={{ transition: "all 0.09s" }} />
 
-        {/* Lower eyelid */}
-        <path d={`M 57 ${97 + eyeRy} Q 73 ${102 + eyeRy * 0.2} 89 ${97 + eyeRy}`}
-          fill="none" stroke="rgba(180,120,80,0.5)" strokeWidth="1" strokeLinecap="round" style={{ transition: "all 0.08s" }} />
-        <path d={`M 111 ${97 + eyeRy} Q 127 ${102 + eyeRy * 0.2} 143 ${97 + eyeRy}`}
-          fill="none" stroke="rgba(180,120,80,0.5)" strokeWidth="1" strokeLinecap="round" style={{ transition: "all 0.08s" }} />
+        {/* Irises — multi-layered with pupil tracking */}
+        {eyeRy > 3 && <>
+          {/* Iris outer ring */}
+          <circle cx={73 + pupilOff.x * 0.6} cy={97 + pupilOff.y * 0.4} r={irisR} fill="url(#irisGrad)"
+            style={{ transition: "cx 0.5s ease, cy 0.5s ease" }} />
+          <circle cx={127 + pupilOff.x * 0.6} cy={97 + pupilOff.y * 0.4} r={irisR} fill="url(#irisGrad)"
+            style={{ transition: "cx 0.5s ease, cy 0.5s ease" }} />
+          {/* Iris inner glow */}
+          <circle cx={73 + pupilOff.x * 0.6} cy={97 + pupilOff.y * 0.4} r={irisR * 0.7} fill="url(#irisInner)"
+            style={{ transition: "cx 0.5s ease, cy 0.5s ease" }} />
+          <circle cx={127 + pupilOff.x * 0.6} cy={97 + pupilOff.y * 0.4} r={irisR * 0.7} fill="url(#irisInner)"
+            style={{ transition: "cx 0.5s ease, cy 0.5s ease" }} />
+          {/* Iris texture lines */}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => {
+            const rad = angle * Math.PI / 180;
+            const cx1 = 73 + pupilOff.x * 0.6;
+            const cy1 = 97 + pupilOff.y * 0.4;
+            return (
+              <line key={`il${angle}`}
+                x1={cx1 + Math.cos(rad) * pupilR * 1.1} y1={cy1 + Math.sin(rad) * pupilR * 1.1}
+                x2={cx1 + Math.cos(rad) * irisR * 0.9} y2={cy1 + Math.sin(rad) * irisR * 0.9}
+                stroke="rgba(60,35,10,0.12)" strokeWidth="0.5"
+                style={{ transition: "all 0.5s ease" }} />
+            );
+          })}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => {
+            const rad = angle * Math.PI / 180;
+            const cx1 = 127 + pupilOff.x * 0.6;
+            const cy1 = 97 + pupilOff.y * 0.4;
+            return (
+              <line key={`ir${angle}`}
+                x1={cx1 + Math.cos(rad) * pupilR * 1.1} y1={cy1 + Math.sin(rad) * pupilR * 1.1}
+                x2={cx1 + Math.cos(rad) * irisR * 0.9} y2={cy1 + Math.sin(rad) * irisR * 0.9}
+                stroke="rgba(60,35,10,0.12)" strokeWidth="0.5"
+                style={{ transition: "all 0.5s ease" }} />
+            );
+          })}
 
-        {/* Nose */}
-        <path d="M 100 103 L 94 122 Q 100 126 106 122 Z"
-          fill="rgba(160,90,40,0.10)" />
-        <path d="M 94 122 Q 88 127 87 124 Q 88 119 94 118"
-          fill="rgba(160,90,40,0.14)" />
-        <path d="M 106 122 Q 112 127 113 124 Q 112 119 106 118"
-          fill="rgba(160,90,40,0.14)" />
-        <path d="M 100 103 L 96 117 Q 100 120 104 117 L 100 103"
-          fill="none" stroke="rgba(140,80,35,0.20)" strokeWidth="1.2" strokeLinecap="round" />
+          {/* Pupils — with tracking */}
+          <circle cx={73 + pupilOff.x * 0.7} cy={97 + pupilOff.y * 0.5} r={pupilR} fill="#060200"
+            style={{ transition: "cx 0.45s ease, cy 0.45s ease, r 0.3s ease" }} />
+          <circle cx={127 + pupilOff.x * 0.7} cy={97 + pupilOff.y * 0.5} r={pupilR} fill="#060200"
+            style={{ transition: "cx 0.45s ease, cy 0.45s ease, r 0.3s ease" }} />
+
+          {/* Eye reflections — primary catch light */}
+          <ellipse cx={76 + pupilOff.x * 0.2} cy={93 + pupilOff.y * 0.15} rx="2.8" ry="2.2" fill="rgba(255,255,255,0.92)"
+            style={{ transition: "cx 0.4s ease, cy 0.4s ease" }} />
+          <ellipse cx={130 + pupilOff.x * 0.2} cy={93 + pupilOff.y * 0.15} rx="2.8" ry="2.2" fill="rgba(255,255,255,0.92)"
+            style={{ transition: "cx 0.4s ease, cy 0.4s ease" }} />
+          {/* Secondary reflection */}
+          <circle cx={69 + pupilOff.x * 0.15} cy={99 + pupilOff.y * 0.1} r="1.3" fill="rgba(255,255,255,0.5)"
+            style={{ transition: "cx 0.4s ease" }} />
+          <circle cx={123 + pupilOff.x * 0.15} cy={99 + pupilOff.y * 0.1} r="1.3" fill="rgba(255,255,255,0.5)"
+            style={{ transition: "cx 0.4s ease" }} />
+          {/* Ambient reflection arc */}
+          <path d={`M ${70 + pupilOff.x * 0.1} 101 Q ${73 + pupilOff.x * 0.1} 102 ${76 + pupilOff.x * 0.1} 101`}
+            fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" strokeLinecap="round"
+            style={{ transition: "all 0.4s ease" }} />
+          <path d={`M ${124 + pupilOff.x * 0.1} 101 Q ${127 + pupilOff.x * 0.1} 102 ${130 + pupilOff.x * 0.1} 101`}
+            fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" strokeLinecap="round"
+            style={{ transition: "all 0.4s ease" }} />
+        </>}
+
+        {/* Eyelids — more natural shape */}
+        <path d={`M 56 ${97 - eyeRy * 0.95} Q 64 ${89 - eyeRy * 0.4} 73 ${88 - eyeRy * 0.35} Q 82 ${89 - eyeRy * 0.4} 90 ${97 - eyeRy * 0.95}`}
+          fill="none" stroke="#C4946E" strokeWidth="1.8" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+        <path d={`M 110 ${97 - eyeRy * 0.95} Q 118 ${89 - eyeRy * 0.4} 127 ${88 - eyeRy * 0.35} Q 136 ${89 - eyeRy * 0.4} 144 ${97 - eyeRy * 0.95}`}
+          fill="none" stroke="#C4946E" strokeWidth="1.8" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+        {/* Eyelash suggestion */}
+        <path d={`M 56 ${97 - eyeRy} Q 64 ${88 - eyeRy * 0.45} 73 ${87 - eyeRy * 0.4} Q 82 ${88 - eyeRy * 0.45} 90 ${97 - eyeRy}`}
+          fill="none" stroke="rgba(30,15,5,0.35)" strokeWidth="1.2" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+        <path d={`M 110 ${97 - eyeRy} Q 118 ${88 - eyeRy * 0.45} 127 ${87 - eyeRy * 0.4} Q 136 ${88 - eyeRy * 0.45} 144 ${97 - eyeRy}`}
+          fill="none" stroke="rgba(30,15,5,0.35)" strokeWidth="1.2" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+
+        {/* Lower eyelid — softer */}
+        <path d={`M 57 ${97 + eyeRy * 0.9} Q 73 ${101 + eyeRy * 0.25} 89 ${97 + eyeRy * 0.9}`}
+          fill="none" stroke="rgba(170,115,75,0.35)" strokeWidth="1" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+        <path d={`M 111 ${97 + eyeRy * 0.9} Q 127 ${101 + eyeRy * 0.25} 143 ${97 + eyeRy * 0.9}`}
+          fill="none" stroke="rgba(170,115,75,0.35)" strokeWidth="1" strokeLinecap="round" style={{ transition: "all 0.09s" }} />
+        {/* Under-eye subtle bag */}
+        <path d={`M 60 ${99 + eyeRy * 0.85} Q 73 ${103 + eyeRy * 0.2} 86 ${99 + eyeRy * 0.85}`}
+          fill="none" stroke="rgba(150,100,60,0.08)" strokeWidth="2" strokeLinecap="round" filter="url(#softBlur)" />
+        <path d={`M 114 ${99 + eyeRy * 0.85} Q 127 ${103 + eyeRy * 0.2} 140 ${99 + eyeRy * 0.85}`}
+          fill="none" stroke="rgba(150,100,60,0.08)" strokeWidth="2" strokeLinecap="round" filter="url(#softBlur)" />
+
+        {/* === NOSE — more defined, realistic === */}
+        {/* Nose bridge */}
+        <path d="M 98 82 Q 97 95 96 105 Q 95 112 94 118" fill="none" stroke="rgba(150,85,35,0.08)" strokeWidth="2" strokeLinecap="round" />
+        <path d="M 102 82 Q 103 95 104 105 Q 105 112 106 118" fill="none" stroke="rgba(150,85,35,0.06)" strokeWidth="1.5" />
+        {/* Nose tip */}
+        <path d="M 93 120 Q 88 125 87 123 Q 88 118 93 117" fill="rgba(150,85,35,0.13)" />
+        <path d="M 107 120 Q 112 125 113 123 Q 112 118 107 117" fill="rgba(150,85,35,0.13)" />
+        {/* Nose bridge shadow left */}
+        <path d="M 96 100 L 93 120" fill="none" stroke="rgba(140,75,30,0.10)" strokeWidth="1.5" strokeLinecap="round" />
         {/* Nose tip highlight */}
-        <ellipse cx="100" cy="122" rx="5" ry="3.5" fill="rgba(245,200,150,0.35)" />
+        <ellipse cx="100" cy="121" rx="5.5" ry="3.8" fill="rgba(250,210,170,0.3)" />
+        {/* Nostril shadows */}
+        <ellipse cx="93" cy="123" rx="3.5" ry="2.5" fill="rgba(100,50,20,0.12)" />
+        <ellipse cx="107" cy="123" rx="3.5" ry="2.5" fill="rgba(100,50,20,0.12)" />
 
-        {/* Cheeks blush */}
-        <ellipse cx="55" cy="118" rx="20" ry="12" fill="url(#cheekGrad)" opacity={speaking ? "0.9" : "0.5"} style={{ transition: "opacity 0.5s" }} />
-        <ellipse cx="145" cy="118" rx="20" ry="12" fill="url(#cheekGrad)" opacity={speaking ? "0.9" : "0.5"} style={{ transition: "opacity 0.5s" }} />
+        {/* === CHEEKS — soft natural blush === */}
+        <ellipse cx="53" cy="118" rx="22" ry="14" fill="url(#cheekL)"
+          opacity={speaking ? "1" : "0.6"} style={{ transition: "opacity 0.6s ease" }} />
+        <ellipse cx="147" cy="118" rx="22" ry="14" fill="url(#cheekR)"
+          opacity={speaking ? "1" : "0.6"} style={{ transition: "opacity 0.6s ease" }} />
 
-        {/* Nasolabial folds */}
-        <path d="M 86 125 Q 82 138 85 148" fill="none" stroke="rgba(140,80,40,0.12)" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M 114 125 Q 118 138 115 148" fill="none" stroke="rgba(140,80,40,0.12)" strokeWidth="1.8" strokeLinecap="round" />
+        {/* Nasolabial folds — subtle */}
+        <path d="M 85 126 Q 82 136 83 147" fill="none" stroke="rgba(135,75,35,0.10)" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M 115 126 Q 118 136 117 147" fill="none" stroke="rgba(135,75,35,0.10)" strokeWidth="1.5" strokeLinecap="round" />
 
-        {/* MOUTH */}
-        {/* Lip shadow */}
-        <ellipse cx="100" cy={152 + mp.cy} rx={mp.ow + 3} ry={mp.oh * 0.4 + 3}
-          fill="rgba(120,60,30,0.14)" style={{ transition: "all 0.10s ease" }} />
+        {/* === MOUTH — highly detailed lips === */}
+        {/* Philtrum (groove above upper lip) */}
+        <path d="M 97 128 Q 100 130 103 128 L 103 145 Q 100 147 97 145 Z"
+          fill="rgba(150,85,40,0.06)" />
+        <path d="M 97 130 L 97 144" fill="none" stroke="rgba(140,80,35,0.08)" strokeWidth="0.8" />
+        <path d="M 103 130 L 103 144" fill="none" stroke="rgba(140,80,35,0.08)" strokeWidth="0.8" />
+
+        {/* Lip shadow underneath */}
+        <ellipse cx="100" cy={153 + mp.cy} rx={mp.ow + 4} ry={mp.oh * 0.35 + 4}
+          fill="rgba(110,55,25,0.10)" filter="url(#softBlur)" style={{ transition: "all 0.12s ease" }} />
+
         {/* Upper lip */}
-        <path d={`M ${100 - mp.ow} 148 Q ${100 - mp.ow * 0.4} 145 100 147 Q ${100 + mp.ow * 0.4} 145 ${100 + mp.ow} 148`}
-          fill="#C4785A" style={{ transition: "all 0.10s ease" }} />
-        {/* Cupid bow highlight */}
-        <path d={`M ${100 - mp.ow * 0.5} 146 Q 100 143 ${100 + mp.ow * 0.5} 146`}
-          fill="none" stroke="rgba(220,140,100,0.5)" strokeWidth="1.2" strokeLinecap="round"
-          style={{ transition: "all 0.10s ease" }} />
+        <path d={`M ${100 - mp.ow} 148 Q ${100 - mp.ow * 0.5} 145.5 ${100 - 4} 146 Q 100 143.5 ${100 + 4} 146 Q ${100 + mp.ow * 0.5} 145.5 ${100 + mp.ow} 148`}
+          fill="url(#upperLip)" style={{ transition: "all 0.12s ease" }} />
+        {/* Cupid's bow highlight */}
+        <path d={`M ${100 - 5} 145.5 Q 100 143 ${100 + 5} 145.5`}
+          fill="none" stroke="rgba(230,160,120,0.45)" strokeWidth="1" strokeLinecap="round"
+          style={{ transition: "all 0.12s ease" }} />
+        {/* Upper lip shadow line */}
+        <path d={`M ${100 - mp.ow + 2} 147.5 Q 100 ${148.5 + mp.oh * 0.1} ${100 + mp.ow - 2} 147.5`}
+          fill="none" stroke="rgba(80,30,10,0.18)" strokeWidth="0.8" style={{ transition: "all 0.12s ease" }} />
 
-        {/* Lip opening */}
+        {/* Mouth opening */}
         {mp.oh > 2 && (
-          <ellipse cx="100" cy={148 + mp.oh * 0.6}
-            rx={mp.ow - 2} ry={mp.oh * 0.8}
-            fill="#3A1A0A" style={{ transition: "all 0.10s ease" }} />
-        )}
-
-        {/* Inner mouth / teeth */}
-        {mp.ih > 4 && (
-          <>
-            <ellipse cx="100" cy={149 + mp.cy}
-              rx={mp.iw} ry={mp.ih * 0.5}
-              fill="#F5E8D8" style={{ transition: "all 0.10s ease" }} />
-            {/* Teeth line */}
-            <line x1={100 - mp.iw + 2} y1={149 + mp.cy} x2={100 + mp.iw - 2} y2={149 + mp.cy}
-              stroke="rgba(200,160,120,0.4)" strokeWidth="0.8" />
-            {/* Tongue */}
-            <ellipse cx="100" cy={155 + mp.cy} rx={mp.iw * 0.65} ry={mp.ih * 0.35}
-              fill="#D4847A" style={{ transition: "all 0.10s ease" }} />
-          </>
-        )}
-
-        {/* Lower lip */}
-        <path d={`M ${100 - mp.ow} 148 Q ${100 - mp.ow * 0.5} ${156 + mp.oh * 0.8 + mp.cy} 100 ${157 + mp.oh * 0.9 + mp.cy} Q ${100 + mp.ow * 0.5} ${156 + mp.oh * 0.8 + mp.cy} ${100 + mp.ow} 148`}
-          fill="#B86850" style={{ transition: "all 0.10s ease" }} />
-        {/* Lower lip highlight */}
-        <ellipse cx="100" cy={154 + mp.oh * 0.4 + mp.cy}
-          rx={mp.ow * 0.55} ry={mp.oh * 0.22 + 2}
-          fill="rgba(230,160,120,0.38)" style={{ transition: "all 0.10s ease" }} />
-
-        {/* Mouth corners */}
-        <circle cx={100 - mp.ow} cy="148" r="2.5" fill="#A85840" style={{ transition: "all 0.10s ease" }} />
-        <circle cx={100 + mp.ow} cy="148" r="2.5" fill="#A85840" style={{ transition: "all 0.10s ease" }} />
-
-        {/* Chin */}
-        <ellipse cx="100" cy="182" rx="28" ry="8" fill="rgba(160,90,40,0.06)" />
-        {/* Chin dimple */}
-        <path d="M 97 176 Q 100 179 103 176" fill="none" stroke="rgba(140,80,40,0.15)" strokeWidth="1.2" strokeLinecap="round" />
-
-        {/* Overall face shadow overlay */}
-        <ellipse cx="100" cy="105" rx="75" ry="88" fill="url(#skinShadow)" />
-
-        {/* Thinking indicator */}
-        {thinking && (
-          <g>
-            <circle cx="155" cy="55" r="6" fill={`${C.accent}22`} style={{ animation: "pulse 1.2s infinite" }} />
-            <circle cx="168" cy="44" r="4" fill={`${C.accent}18`} style={{ animation: "pulse 1.2s 0.3s infinite" }} />
-            <circle cx="177" cy="35" r="2.5" fill={`${C.accent}14`} style={{ animation: "pulse 1.2s 0.6s infinite" }} />
+          <g clipPath="url(#mouthClip)">
+            {/* Dark mouth interior */}
+            <ellipse cx="100" cy={148 + mp.oh * 0.55}
+              rx={mp.ow - 1} ry={mp.oh * 0.85}
+              fill="#2A0E05" style={{ transition: "all 0.12s ease" }} />
+            {/* Teeth */}
+            {mp.ih > 3 && <>
+              {/* Upper teeth row */}
+              <rect x={100 - mp.iw + 1} y={147 + mp.cy} width={(mp.iw - 1) * 2} height={mp.ih * 0.38}
+                rx="2" fill="#F0E8DE" style={{ transition: "all 0.12s ease" }} />
+              {/* Teeth gaps */}
+              <line x1="100" y1={147 + mp.cy} x2="100" y2={147 + mp.cy + mp.ih * 0.35}
+                stroke="rgba(180,150,120,0.3)" strokeWidth="0.5" />
+              <line x1={100 - mp.iw * 0.35} y1={147 + mp.cy} x2={100 - mp.iw * 0.35} y2={147 + mp.cy + mp.ih * 0.32}
+                stroke="rgba(180,150,120,0.25)" strokeWidth="0.4" />
+              <line x1={100 + mp.iw * 0.35} y1={147 + mp.cy} x2={100 + mp.iw * 0.35} y2={147 + mp.cy + mp.ih * 0.32}
+                stroke="rgba(180,150,120,0.25)" strokeWidth="0.4" />
+              {/* Tongue */}
+              <ellipse cx="100" cy={155 + mp.cy} rx={mp.iw * 0.6} ry={mp.ih * 0.32}
+                fill="#D0807A" style={{ transition: "all 0.12s ease" }} />
+              <ellipse cx="100" cy={154 + mp.cy} rx={mp.iw * 0.45} ry={mp.ih * 0.2}
+                fill="rgba(220,130,120,0.4)" style={{ transition: "all 0.12s ease" }} />
+            </>}
           </g>
         )}
 
-        {/* Breathing: subtle chest/shoulder movement indicator at bottom */}
-        <ellipse cx="100" cy={238 + (breathe ? 1 : 0)} rx="68" ry={28 + (breathe ? 1 : 0)}
-          fill="url(#shirtGrad)" style={{ transition: "all 2.2s ease-in-out" }} />
+        {/* Lower lip */}
+        <path d={`M ${100 - mp.ow} 148 Q ${100 - mp.ow * 0.5} ${155 + mp.oh * 0.75 + mp.cy} 100 ${156 + mp.oh * 0.85 + mp.cy} Q ${100 + mp.ow * 0.5} ${155 + mp.oh * 0.75 + mp.cy} ${100 + mp.ow} 148`}
+          fill="url(#lowerLip)" style={{ transition: "all 0.12s ease" }} />
+        {/* Lower lip center highlight */}
+        <ellipse cx="100" cy={153 + mp.oh * 0.35 + mp.cy}
+          rx={mp.ow * 0.5} ry={mp.oh * 0.2 + 2}
+          fill="rgba(235,170,135,0.32)" style={{ transition: "all 0.12s ease" }} />
+        {/* Lower lip bottom shadow */}
+        <path d={`M ${100 - mp.ow + 3} ${155 + mp.oh * 0.7 + mp.cy} Q 100 ${158 + mp.oh * 0.85 + mp.cy} ${100 + mp.ow - 3} ${155 + mp.oh * 0.7 + mp.cy}`}
+          fill="none" stroke="rgba(100,45,20,0.12)" strokeWidth="1.5" strokeLinecap="round" style={{ transition: "all 0.12s ease" }} />
+
+        {/* Mouth corners — dimple shadows */}
+        <circle cx={100 - mp.ow - 1} cy="148" r="2.2" fill="rgba(130,60,35,0.15)" style={{ transition: "all 0.12s ease" }} />
+        <circle cx={100 + mp.ow + 1} cy="148" r="2.2" fill="rgba(130,60,35,0.15)" style={{ transition: "all 0.12s ease" }} />
+
+        {/* === CHIN === */}
+        <ellipse cx="100" cy="180" rx="30" ry="9" fill="rgba(150,85,40,0.05)" />
+        {/* Chin cleft */}
+        <path d="M 97 175 Q 100 178 103 175" fill="none" stroke="rgba(130,70,35,0.12)" strokeWidth="1" strokeLinecap="round" />
+        {/* Chin highlight */}
+        <ellipse cx="100" cy="172" rx="14" ry="6" fill="rgba(250,220,190,0.15)" />
+
+        {/* === OVERALL FACE SHADOW overlay === */}
+        <ellipse cx="100" cy="105" rx="75" ry="88" fill="url(#skinShadow)" />
+
+        {/* === THINKING INDICATOR === */}
+        {thinking && (
+          <g opacity="0.85">
+            <circle cx="157" cy="52" r="6.5" fill={`${C.accent}20`} style={{ animation: "pulse 1.4s ease-in-out infinite" }} />
+            <circle cx="170" cy="40" r="4.5" fill={`${C.accent}16`} style={{ animation: "pulse 1.4s 0.35s ease-in-out infinite" }} />
+            <circle cx="179" cy="31" r="2.8" fill={`${C.accent}12`} style={{ animation: "pulse 1.4s 0.7s ease-in-out infinite" }} />
+          </g>
+        )}
+
+        {/* === BREATHING === */}
+        <ellipse cx="100" cy={238 + (breathe ? 1.2 : 0)} rx="70" ry={29 + (breathe ? 1.5 : 0)}
+          fill="url(#shirtGrad)" style={{ transition: "all 2.4s ease-in-out" }} />
       </svg>
     </div>
   );
