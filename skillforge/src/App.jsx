@@ -19,9 +19,26 @@ const DIFF = [
   { id: "hard", label: "Difficile", icon: "🔴", color: C.danger, desc: "Bot instabile, provocatorio" },
 ];
 
+const DIFF_SL = [
+  { id: "mot_no_comp", label: "Motivato non competente", icon: "🔥", color: "#E67E22", desc: "Entusiasta ma inesperto. Ha bisogno di guida e istruzioni." },
+  { id: "mot_comp", label: "Motivato competente", icon: "⭐", color: C.success, desc: "Competente e motivato. Autonomo, cerca riconoscimento." },
+  { id: "comp_no_mot", label: "Competente non motivato", icon: "😐", color: C.warn, desc: "Sa fare ma ha perso motivazione. Serve ascolto e coinvolgimento." },
+  { id: "no_comp_no_mot", label: "Non competente e non motivato", icon: "🔴", color: C.danger, desc: "Né competenze né motivazione. Situazione critica, serve pazienza." },
+];
+
+const SL_CATEGORIES = ["feedback", "difficult"];
+
+function getDiffOptions(categoryId) {
+  return SL_CATEGORIES.includes(categoryId) ? DIFF_SL : DIFF;
+}
+
 function diffMod(d) {
   if (d === "easy") return "\nFACILE: Collaborativo e prevedibile. Leggera resistenza → apertura → accordo. Max 2 frasi.";
   if (d === "hard") return "\nDIFFICILE: Emotivamente instabile. Alterna calma e scatti. Cambi opinione, provocazioni, domande scomode. Max 3 frasi.";
+  if (d === "mot_no_comp") return "\nMOTIVATO NON COMPETENTE: Sei entusiasta e desideroso di fare bene, ma ti mancano competenze ed esperienza. Fai domande, mostri buona volontà ma commetti errori. Hai bisogno di guida chiara e istruzioni dettagliate. Accetti il feedback con apertura. Max 2-3 frasi.";
+  if (d === "mot_comp") return "\nMOTIVATO COMPETENTE: Sei esperto e motivato. Lavori in autonomia, porti risultati. Cerchi riconoscimento e delega. Se microgestito ti irriti. Se valorizzato dai il massimo. Max 2-3 frasi.";
+  if (d === "comp_no_mot") return "\nCOMPETENTE NON MOTIVATO: Hai le competenze ma hai perso la motivazione. Sei disilluso, cinico o annoiato. Rispondi con distacco. Se il manager ascolta e coinvolge, ti apri. Se impone, ti chiudi ancora di più. Max 2-3 frasi.";
+  if (d === "no_comp_no_mot") return "\nNON COMPETENTE E NON MOTIVATO: Non hai né le competenze né la motivazione. Sei passivo, evasivo, talvolta ostile. Cerchi scuse, minimizzi i problemi. Solo un approccio molto paziente e strutturato può sbloccarti. Max 3 frasi.";
   return "\nMEDIO: Realistico. Alterna collaborazione e resistenza. Max 2-3 frasi.";
 }
 
@@ -555,7 +572,7 @@ export default function App() {
               </div>
               {selectedCategory.scenarios.map(sc => (
                 <div key={sc.id} style={{ ...S.glass, cursor: "pointer", marginBottom: "10px", transition: "all 0.3s" }}
-                  onClick={() => { setSelectedScenario(sc); checkDailyLimit(); nav("scenario"); }}
+                  onClick={() => { setSelectedScenario(sc); const isSL = SL_CATEGORIES.includes(selectedCategory?.id); setDifficulty(isSL ? "mot_no_comp" : "medium"); checkDailyLimit(); nav("scenario"); }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = selectedCategory.color + "44"; e.currentTarget.style.transform = "translateX(6px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
                   <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>{sc.title}</div>
@@ -592,9 +609,9 @@ export default function App() {
             <div style={{ background: `${C.teal}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.teal}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Parli con</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{selectedScenario.role_ai_full}</div></div>
           </div>
           <div style={{ marginTop: "18px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>Difficoltà</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
-              {DIFF.map(d => (
+            <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{SL_CATEGORIES.includes(cat?.id) ? "Tipo di collaboratore" : "Difficoltà"}</div>
+            <div style={{ display: "grid", gridTemplateColumns: getDiffOptions(cat?.id).length === 4 ? "1fr 1fr" : "1fr 1fr 1fr", gap: "8px" }}>
+              {getDiffOptions(cat?.id).map(d => (
                 <div key={d.id} onClick={() => setDifficulty(d.id)} style={{ background: difficulty === d.id ? `${d.color}18` : C.glass, border: `2px solid ${difficulty === d.id ? d.color : C.border}`, borderRadius: "12px", padding: "14px", cursor: "pointer", textAlign: "center", transition: "all 0.2s", transform: difficulty === d.id ? "scale(1.03)" : "scale(1)" }}>
                   <div style={{ fontSize: "22px", marginBottom: "4px" }}>{d.icon}</div>
                   <div style={{ fontSize: "13px", fontWeight: 700, color: difficulty === d.id ? d.color : C.text }}>{d.label}</div>
@@ -632,7 +649,7 @@ export default function App() {
   // ═══ ROLEPLAY ═══
   if (screen === "roleplay") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = DIFF.find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL].find(d => d.id === difficulty);
     return (
       <div style={S.app}><style>{CSS}</style>
         <div style={{ ...S.wrap, display: "flex", flexDirection: "column", height: "100vh", maxHeight: "100dvh", padding: "16px" }}>
@@ -681,7 +698,7 @@ export default function App() {
   // ═══ REPORT ═══
   if (screen === "report") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = DIFF.find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL].find(d => d.id === difficulty);
     return (
       <div style={S.app}><style>{CSS}</style>
         {showLB && <LBModal />}
