@@ -14,7 +14,7 @@ const C = {
 };
 
 const DIFF = [
-  { id: "easy", label: "Facile", icon: "🟢", color: C.success, desc: "Bot collaborativo, script lineare" },
+  { id: "easy", label: "Facilissimo", icon: "🟢", color: C.success, desc: "Bot collaborativo, script lineare" },
   { id: "medium", label: "Medio", icon: "🟡", color: C.warn, desc: "Bot realistico, imprevedibile" },
   { id: "hard", label: "Difficile", icon: "🔴", color: C.danger, desc: "Bot instabile, provocatorio" },
 ];
