@@ -31,9 +31,18 @@ const SL_SCENARIOS = ["ld1", "co1", "co2", "co3"];
 const INF_SCENARIOS = ["ld3"];
 
 const DIFF_INF = [
-  { id: "inf_collab", label: "Collaboratore", icon: "😐", color: C.warn, desc: "Competente ma non motivato. Sa fare ma ha perso la voglia. Serve ascolto e leva giusta." },
-  { id: "inf_capo", label: "Capo / Autorità", icon: "👔", color: "#8E44AD", desc: "Persona con autorità su di te. Devi influenzare senza imporre, usando dati e diplomazia." },
-  { id: "inf_gruppo", label: "Gruppo", icon: "👥", color: C.teal, desc: "Un team intero da orientare. Devi gestire dinamiche diverse e trovare consenso." },
+  { id: "inf_collab", label: "Collaboratore", icon: "😐", color: C.warn, desc: "Competente ma demotivato. Ha smesso di rispettare le scadenze e la qualità è in calo.",
+    role_ai: "Roberto", role_ai_full: "Roberto, senior account manager", role_user: "Responsabile commerciale",
+    brief: "Roberto è un account manager esperto con 8 anni di anzianità. Negli ultimi 2 mesi ha iniziato a saltare le riunioni del lunedì, consegna i report in ritardo e il tono con i clienti è diventato sbrigativo. I numeri per ora reggono grazie alla sua esperienza, ma il trend è preoccupante. Devi affrontarlo per influenzare il suo comportamento.",
+    ai_p: "Sei Roberto, account manager senior. Sei competente e lo sai. Negli ultimi mesi ti senti dato per scontato: fai il doppio degli altri ma nessuno lo riconosce. Hai iniziato a fare il minimo indispensabile. Se il tuo capo ti ascolta davvero e riconosce il problema, ti apri e racconti la frustrazione. Se parte accusandoti o con un elenco di mancanze, ti chiudi e rispondi con cinismo: 'Ho sempre fatto il mio lavoro, non vedo il problema'. Se senti che c'è un interesse genuino per te, proponi soluzioni. Max 2-3 frasi." },
+  { id: "inf_capo", label: "Capo / Autorità", icon: "👔", color: "#8E44AD", desc: "Il tuo direttore prende decisioni che penalizzi il team. Devi influenzarlo con diplomazia.",
+    role_ai: "Dott. Martini", role_ai_full: "Dott. Martini, Direttore Commerciale", role_user: "Area Manager",
+    brief: "Il Dott. Martini, tuo direttore commerciale, ha deciso di tagliare il budget formazione del 50% per riallocare risorse sul marketing digitale. Questa scelta rischia di compromettere la crescita del tuo team di 12 venditori, molti dei quali junior. Devi convincerlo a riconsiderare la decisione senza entrare in conflitto con lui.",
+    ai_p: "Sei il Dott. Martini, Direttore Commerciale con 20 anni di esperienza. Hai preso la decisione sul budget formazione dopo un'analisi dei costi. Sei convinto che il marketing digitale generi più lead. Non ami essere contraddetto dai sottoposti, ma rispetti chi porta dati e proposte concrete. Se chi ti parla arriva con numeri, alternative creative e rispetta la tua autorità, ascolti con attenzione e sei disposto a trovare un compromesso. Se percepisce che vuole insegnarti il mestiere, tagli corto con cortesia: 'Apprezzo il tuo punto di vista, ma la decisione è presa'. Sei diretto, formale e pragmatico. Max 2-3 frasi." },
+  { id: "inf_gruppo", label: "Gruppo", icon: "👥", color: C.teal, desc: "Il tuo team resiste a un nuovo processo. Devi ottenere adesione e cambiamento collettivo.",
+    role_ai: "Team", role_ai_full: "Il team commerciale riunito", role_user: "Responsabile di filiale",
+    brief: "Sei il responsabile di filiale e devi introdurre un nuovo CRM che sostituirà il vecchio sistema usato da 5 anni. Il team di 8 persone è resistente: i senior lo vedono come perdita di tempo, i junior temono di sbagliare, e tutti si lamentano del carico di lavoro già elevato. Hai convocato una riunione per ottenere l'adesione del gruppo al cambiamento.",
+    ai_p: "Sei il portavoce di un team di 8 commerciali durante una riunione. Esprimi le diverse voci del gruppo alternandole realisticamente. I SENIOR dicono cose come: 'Il vecchio sistema funziona, perché cambiare?', 'Ho i miei clienti da 10 anni, non ho bisogno di un software per gestirli'. I JUNIOR dicono: 'Un altro sistema da imparare? Non abbiamo già abbastanza da fare?', 'E se sbagliamo qualcosa nella migrazione?'. GLI SCETTICI: 'L'ultimo cambiamento doveva semplificarci la vita e invece...'. Se chi conduce la riunione ascolta le obiezioni, dà risposte concrete, mostra i benefici pratici e coinvolge il gruppo nelle decisioni operative, il consenso cresce progressivamente. Se impone dall'alto o minimizza le preoccupazioni, il gruppo si compatta nella resistenza. Max 2-3 frasi, alternando le voci." },
 ];
 
 function getDiffOptions(categoryId, scenarioId) {
@@ -64,9 +73,9 @@ function diffMod(d) {
   if (d === "mot_comp") return "\nMOTIVATO COMPETENTE: Sei esperto e motivato. Lavori in autonomia, porti risultati. Cerchi riconoscimento e delega. Se microgestito ti irriti. Se valorizzato dai il massimo. Max 2-3 frasi.";
   if (d === "comp_no_mot") return "\nCOMPETENTE NON MOTIVATO: Hai le competenze ma hai perso la motivazione. Sei disilluso, cinico o annoiato. Rispondi con distacco. Se il manager ascolta e coinvolge, ti apri. Se impone, ti chiudi ancora di più. Max 2-3 frasi.";
   if (d === "no_comp_no_mot") return "\nNON COMPETENTE E NON MOTIVATO: Non hai né le competenze né la motivazione. Sei passivo, evasivo, talvolta ostile. Cerchi scuse, minimizzi i problemi. Solo un approccio molto paziente e strutturato può sbloccarti. Max 3 frasi.";
-  if (d === "inf_collab") return "\nCOLLABORATORE COMPETENTE NON MOTIVATO: Sei un collaboratore esperto che ha perso la motivazione. Il tuo comportamento problematico è specifico e visibile (ritardi, scarsa qualità, disimpegno). Sei cinico e distaccato. Se chi ti parla ascolta davvero le tue ragioni e ti coinvolge nella soluzione, ti apri gradualmente. Se impone o minaccia, ti chiudi e diventi passivo-aggressivo. Max 2-3 frasi.";
-  if (d === "inf_capo") return "\nCAPO / PERSONA CON AUTORITÀ: Sei un superiore gerarchico o una persona con autorità. Hai le tue priorità e il tuo modo di fare le cose. Sei abituato a decidere, non a essere influenzato dai sottoposti. Se chi ti parla porta dati concreti, proposte strutturate e rispetta il tuo ruolo, ascolti con interesse. Se percepisce che vuole insegnarti il mestiere o ti critica, tagli corto. Sei cortese ma diretto. Max 2-3 frasi.";
-  if (d === "inf_gruppo") return "\nGRUPPO: Sei un membro rappresentativo di un team. Rispondi a nome del gruppo, esprimendo le diverse sensibilità presenti. Alcuni nel gruppo sono favorevoli al cambiamento, altri resistenti, altri indifferenti. Esprimi queste diverse voci alternandole. Se chi parla al gruppo sa creare visione condivisa e coinvolgimento, il consenso cresce. Se è autoritario o ignora le obiezioni, il gruppo si frammenta e resiste. Max 2-3 frasi.";
+  if (d === "inf_collab") return "";
+  if (d === "inf_capo") return "";
+  if (d === "inf_gruppo") return "";
   return "\nMEDIO: Realistico. Alterna collaborazione e resistenza. Max 2-3 frasi.";
 }
 
@@ -101,12 +110,24 @@ const CATEGORIES = [
   ]},
 ];
 
+function getInfVariant(d) {
+  return DIFF_INF.find(v => v.id === d);
+}
+
 function sysPr(sc, d) {
-  return `Sei ${sc.role_ai_full} in un roleplay. Contesto: ${sc.brief}\nPersonalità: ${sc.ai_p}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.${diffMod(d)}`;
+  const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
+  const role = inf ? inf.role_ai_full : sc.role_ai_full;
+  const brief = inf ? inf.brief : sc.brief;
+  const personality = inf ? inf.ai_p : sc.ai_p;
+  return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.${diffMod(d)}`;
 }
 function evalPr(sc, convo, d) {
-  const t = convo.map(m => `${m.role === "user" ? "UTENTE" : sc.role_ai}: ${m.text}`).join("\n");
-  return `Executive coach. Valuta roleplay (${d}). Scenario: ${sc.brief} | Utente: ${sc.role_user} | Criteri: ${sc.eval.join(", ")}\n${t}\nSii ONESTO. Punteggi DIVERSI (4-9). Commenti con ESEMPI. 3 forze, 3 miglioramenti CONCRETI.\nSOLO JSON:\n{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio.","better_phrase":"ORIG → MIGLIORE","academy_tip":"Tecnica pratica."}`;
+  const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
+  const aiName = inf ? inf.role_ai : sc.role_ai;
+  const brief = inf ? inf.brief : sc.brief;
+  const roleUser = inf ? inf.role_user : sc.role_user;
+  const t = convo.map(m => `${m.role === "user" ? "UTENTE" : aiName}: ${m.text}`).join("\n");
+  return `Executive coach. Valuta roleplay (${d}). Scenario: ${brief} | Utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}\n${t}\nSii ONESTO. Punteggi DIVERSI (4-9). Commenti con ESEMPI. 3 forze, 3 miglioramenti CONCRETI.\nSOLO JSON:\n{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio.","better_phrase":"ORIG → MIGLIORE","academy_tip":"Tecnica pratica."}`;
 }
 
 // ─── AUTH HELPER ─────────────────────────────────────────────────────────────
@@ -624,6 +645,10 @@ export default function App() {
   if (screen === "scenario") {
     if (!selectedScenario) { setScreen("home"); return null; }
     const cat = CATEGORIES.find(c => c.scenarios.some(s => s.id === selectedScenario?.id));
+    const infVar = INF_SCENARIOS.includes(selectedScenario?.id) ? getInfVariant(difficulty) : null;
+    const dispBrief = infVar ? infVar.brief : selectedScenario.brief;
+    const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
+    const dispRoleAi = infVar ? infVar.role_ai_full : selectedScenario.role_ai_full;
     return (
       <div style={S.app}><style>{CSS}</style>
         <div style={S.wrap}>
@@ -635,11 +660,11 @@ export default function App() {
           <h2 style={{ ...S.h1, fontSize: "clamp(22px,4vw,32px)", marginTop: "10px" }}>{selectedScenario.title}</h2>
           <div style={{ ...S.glass, marginTop: "20px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "8px" }}>Scenario</div>
-            <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(42,26,14,0.65)" }}>{selectedScenario.brief}</p>
+            <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(42,26,14,0.65)" }}>{dispBrief}</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "12px" }}>
-            <div style={{ background: `${C.accent}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.accent}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Il tuo ruolo</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{selectedScenario.role_user}</div></div>
-            <div style={{ background: `${C.teal}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.teal}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Parli con</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{selectedScenario.role_ai_full}</div></div>
+            <div style={{ background: `${C.accent}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.accent}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Il tuo ruolo</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{dispRoleUser}</div></div>
+            <div style={{ background: `${C.teal}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.teal}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Parli con</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{dispRoleAi}</div></div>
           </div>
           <div style={{ marginTop: "18px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{getDiffLabel(cat?.id, selectedScenario?.id)}</div>
@@ -682,24 +707,27 @@ export default function App() {
   // ═══ ROLEPLAY ═══
   if (screen === "roleplay") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = [...DIFF, ...DIFF_SL].find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF].find(d => d.id === difficulty);
+    const infVar = INF_SCENARIOS.includes(selectedScenario?.id) ? getInfVariant(difficulty) : null;
+    const dispRoleAiShort = infVar ? infVar.role_ai : selectedScenario.role_ai;
+    const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
     return (
       <div style={S.app}><style>{CSS}</style>
         <div style={{ ...S.wrap, display: "flex", flexDirection: "column", height: "100vh", maxHeight: "100dvh", padding: "16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0 10px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <img src={LOGO_PICCOLO} alt="" style={{ height: "26px", width: "auto" }} />
-              <div><div style={{ fontSize: "15px", fontWeight: 600 }}>{selectedScenario.title}</div><div style={{ fontSize: "12px", color: C.muted }}>Turno {turnCount}/{MAX_TURNS} · {di.icon} {di.label}</div></div>
+              <div><div style={{ fontSize: "15px", fontWeight: 600 }}>{selectedScenario.title}</div><div style={{ fontSize: "12px", color: C.muted }}>Turno {turnCount}/{MAX_TURNS} · {di?.icon} {di?.label}</div></div>
             </div>
             <button style={{ ...S.btn(C.danger), fontSize: "13px", padding: "8px 14px" }} onClick={genReport} disabled={conversation.length < 2}>Termina →</button>
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "14px 0", overflow: "hidden" }}>
             <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, window.innerWidth * 0.4)} />
-            <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{selectedScenario.role_ai}</div>
+            <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{dispRoleAiShort}</div>
             <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>{isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : turnCount === 0 ? "In attesa..." : "In ascolto"}</div>
             {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{lastAiText}</div>}
             {currentTranscript && <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(42,26,14,0.5)", fontStyle: "italic", textAlign: "center" }}>{currentTranscript}</div>}
-            {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(42,26,14,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{selectedScenario.role_user}</span></div>}
+            {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(42,26,14,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{dispRoleUser}</span></div>}
           </div>
           <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 0 4px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
@@ -731,7 +759,7 @@ export default function App() {
   // ═══ REPORT ═══
   if (screen === "report") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = [...DIFF, ...DIFF_SL].find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF].find(d => d.id === difficulty);
     return (
       <div style={S.app}><style>{CSS}</style>
         {showLB && <LBModal />}
