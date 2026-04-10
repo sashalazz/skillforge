@@ -119,7 +119,7 @@ function sysPr(sc, d) {
   const role = inf ? inf.role_ai_full : sc.role_ai_full;
   const brief = inf ? inf.brief : sc.brief;
   const personality = inf ? inf.ai_p : sc.ai_p;
-  return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.${diffMod(d)}`;
+  return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.\nIndicazioni sceniche: quando vuoi descrivere azioni, gesti, espressioni o atmosfera (es. sospira, si alza, guarda l'orologio, incrocia le braccia), mettile tra asterischi *così*. Queste parti verranno lette da una voce fuori campo. Usale con moderazione per arricchire la scena.${diffMod(d)}`;
 }
 function evalPr(sc, convo, d) {
   const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
@@ -322,16 +322,81 @@ export default function App() {
     } catch (e) { return "Mi scusi, può ripetere?"; }
   };
 
+  // ─── Helpers per indicazioni sceniche (*testo*) ──────────
+  const parseStageDirections = useCallback((text) => {
+    // Divide il testo in segmenti: normali e indicazioni sceniche tra *...*
+    const parts = [];
+    const regex = /\*([^*]+)\*/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: "dialogue", text: text.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: "stage", text: match[1] });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      parts.push({ type: "dialogue", text: text.slice(lastIndex) });
+    }
+    return parts;
+  }, []);
+
+  const renderStyledText = useCallback((text) => {
+    const parts = parseStageDirections(text);
+    return parts.map((p, i) => {
+      if (p.type === "stage") {
+        return <span key={i} style={{ textDecoration: "underline", fontStyle: "italic", color: "rgba(42,26,14,0.4)", fontSize: "13px" }}>{p.text}</span>;
+      }
+      return <span key={i}>{p.text}</span>;
+    });
+  }, [parseStageDirections]);
+
   const speak = useCallback((text) => {
     if (!synthRef.current) return Promise.resolve();
+    const parts = [];
+    const regex = /\*([^*]+)\*/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        const seg = text.slice(lastIndex, match.index).trim();
+        if (seg) parts.push({ type: "dialogue", text: seg });
+      }
+      parts.push({ type: "stage", text: match[1].trim() });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      const seg = text.slice(lastIndex).trim();
+      if (seg) parts.push({ type: "dialogue", text: seg });
+    }
+    if (parts.length === 0) parts.push({ type: "dialogue", text: text });
+
     return new Promise(resolve => {
       synthRef.current.cancel();
-      const u = new SpeechSynthesisUtterance(text); u.lang = "it-IT"; u.rate = 1.15; u.pitch = 1.05;
-      const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it")); if (v) u.voice = v;
-      u.onstart = () => setIsSpeaking(true);
-      u.onend = () => { setIsSpeaking(false); resolve(); };
-      u.onerror = () => { setIsSpeaking(false); resolve(); };
-      synthRef.current.speak(u);
+      let idx = 0;
+      const speakNext = () => {
+        if (idx >= parts.length) { setIsSpeaking(false); resolve(); return; }
+        const part = parts[idx];
+        const u = new SpeechSynthesisUtterance(part.text);
+        u.lang = "it-IT";
+        if (part.type === "stage") {
+          // Voce fuori campo: più profonda, più lenta
+          u.rate = 0.85;
+          u.pitch = 0.65;
+        } else {
+          // Voce del personaggio: normale
+          u.rate = 1.15;
+          u.pitch = 1.05;
+        }
+        const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
+        if (v) u.voice = v;
+        if (idx === 0) u.onstart = () => setIsSpeaking(true);
+        u.onend = () => { idx++; speakNext(); };
+        u.onerror = () => { idx++; speakNext(); };
+        synthRef.current.speak(u);
+      };
+      speakNext();
     });
   }, []);
 
@@ -725,7 +790,7 @@ export default function App() {
             <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, window.innerWidth * 0.4)} />
             <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{dispRoleAiShort}</div>
             <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>{isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : turnCount === 0 ? "In attesa..." : "In ascolto"}</div>
-            {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{lastAiText}</div>}
+            {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{renderStyledText(lastAiText)}</div>}
             {currentTranscript && <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(42,26,14,0.5)", fontStyle: "italic", textAlign: "center" }}>{currentTranscript}</div>}
             {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(42,26,14,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{dispRoleUser}</span></div>}
           </div>
