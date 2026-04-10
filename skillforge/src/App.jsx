@@ -28,13 +28,33 @@ const DIFF_SL = [
 
 const SL_CATEGORIES = ["feedback", "difficult", "coaching"];
 const SL_SCENARIOS = ["ld1", "co1", "co2", "co3"];
+const INF_SCENARIOS = ["ld3"];
+
+const DIFF_INF = [
+  { id: "inf_collab", label: "Collaboratore", icon: "😐", color: C.warn, desc: "Competente ma non motivato. Sa fare ma ha perso la voglia. Serve ascolto e leva giusta." },
+  { id: "inf_capo", label: "Capo / Autorità", icon: "👔", color: "#8E44AD", desc: "Persona con autorità su di te. Devi influenzare senza imporre, usando dati e diplomazia." },
+  { id: "inf_gruppo", label: "Gruppo", icon: "👥", color: C.teal, desc: "Un team intero da orientare. Devi gestire dinamiche diverse e trovare consenso." },
+];
 
 function getDiffOptions(categoryId, scenarioId) {
+  if (INF_SCENARIOS.includes(scenarioId)) return DIFF_INF;
   return (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) ? DIFF_SL : DIFF;
 }
 
 function isSLMode(categoryId, scenarioId) {
-  return SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId);
+  return SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId) || INF_SCENARIOS.includes(scenarioId);
+}
+
+function getDiffLabel(categoryId, scenarioId) {
+  if (INF_SCENARIOS.includes(scenarioId)) return "Chi vuoi influenzare";
+  if (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) return "Tipo di collaboratore";
+  return "Difficoltà";
+}
+
+function getDefaultDiff(categoryId, scenarioId) {
+  if (INF_SCENARIOS.includes(scenarioId)) return "inf_collab";
+  if (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) return "mot_no_comp";
+  return "medium";
 }
 
 function diffMod(d) {
@@ -44,6 +64,9 @@ function diffMod(d) {
   if (d === "mot_comp") return "\nMOTIVATO COMPETENTE: Sei esperto e motivato. Lavori in autonomia, porti risultati. Cerchi riconoscimento e delega. Se microgestito ti irriti. Se valorizzato dai il massimo. Max 2-3 frasi.";
   if (d === "comp_no_mot") return "\nCOMPETENTE NON MOTIVATO: Hai le competenze ma hai perso la motivazione. Sei disilluso, cinico o annoiato. Rispondi con distacco. Se il manager ascolta e coinvolge, ti apri. Se impone, ti chiudi ancora di più. Max 2-3 frasi.";
   if (d === "no_comp_no_mot") return "\nNON COMPETENTE E NON MOTIVATO: Non hai né le competenze né la motivazione. Sei passivo, evasivo, talvolta ostile. Cerchi scuse, minimizzi i problemi. Solo un approccio molto paziente e strutturato può sbloccarti. Max 3 frasi.";
+  if (d === "inf_collab") return "\nCOLLABORATORE COMPETENTE NON MOTIVATO: Sei un collaboratore esperto che ha perso la motivazione. Il tuo comportamento problematico è specifico e visibile (ritardi, scarsa qualità, disimpegno). Sei cinico e distaccato. Se chi ti parla ascolta davvero le tue ragioni e ti coinvolge nella soluzione, ti apri gradualmente. Se impone o minaccia, ti chiudi e diventi passivo-aggressivo. Max 2-3 frasi.";
+  if (d === "inf_capo") return "\nCAPO / PERSONA CON AUTORITÀ: Sei un superiore gerarchico o una persona con autorità. Hai le tue priorità e il tuo modo di fare le cose. Sei abituato a decidere, non a essere influenzato dai sottoposti. Se chi ti parla porta dati concreti, proposte strutturate e rispetta il tuo ruolo, ascolti con interesse. Se percepisce che vuole insegnarti il mestiere o ti critica, tagli corto. Sei cortese ma diretto. Max 2-3 frasi.";
+  if (d === "inf_gruppo") return "\nGRUPPO: Sei un membro rappresentativo di un team. Rispondi a nome del gruppo, esprimendo le diverse sensibilità presenti. Alcuni nel gruppo sono favorevoli al cambiamento, altri resistenti, altri indifferenti. Esprimi queste diverse voci alternandole. Se chi parla al gruppo sa creare visione condivisa e coinvolgimento, il consenso cresce. Se è autoritario o ignora le obiezioni, il gruppo si frammenta e resiste. Max 2-3 frasi.";
   return "\nMEDIO: Realistico. Alterna collaborazione e resistenza. Max 2-3 frasi.";
 }
 
@@ -66,6 +89,7 @@ const CATEGORIES = [
   { id: "leadership", icon: "🎯", label: "Leadership", color: C.teal, description: "Guida e ispira", scenarios: [
     { id: "ld1", title: "Delegare Efficacemente", brief: "Delega un tuo collaboratore.", role_user: "Dir. Engineering", role_ai: "Sara", role_ai_full: "Sara, sviluppatrice", ai_p: "Competente ma insicura. Supportata=sicura. Micromanaggiata=frustrata.", tips: ["Perché lei", "Outcome e autonomia", "Checkpoint", "Anticipa paure", "Fiducia genuina"], eval: ["Chiarezza", "Empowerment", "Supporto", "Fiducia", "Success criteria"] },
     { id: "ld2", title: "Annunciare Cambiamento", brief: "Lavoro ibrido obbligatorio. Non piacerà.", role_user: "People Manager", role_ai: "Luca", role_ai_full: "Luca, vocale del team", ai_p: "Resistente, provocatorio. Se spiega e ascolta, costruttivo. Se impone, resiste.", tips: ["Prima perché poi cosa", "Riconosci preoccupazioni", "Negoziabile vs no", "Coinvolgi", "Timeline"], eval: ["Razionale", "Resistenza", "Trasparenza", "Coinvolgimento", "Visione"] },
+    { id: "ld3", title: "Influenzare un Comportamento", brief: "Devi influenzare un comportamento per ottenere un cambiamento concreto.", role_user: "Manager", role_ai: "Interlocutore", role_ai_full: "Interlocutore da influenzare", ai_p: "Ha le sue ragioni e abitudini. Non cambia facilmente. Se l'approccio è empatico, concreto e rispettoso, si apre al cambiamento. Se percepisce manipolazione o imposizione, resiste.", tips: ["Descrivi il comportamento osservato, non la persona", "Spiega l'impatto concreto", "Ascolta le ragioni dell'altro", "Proponi alternative insieme", "Ottieni un impegno specifico"], eval: ["Descrizione comportamento", "Impatto comunicato", "Ascolto attivo", "Co-costruzione soluzione", "Impegno ottenuto"] },
   ]},
   { id: "coaching", icon: "🏋️", label: "Coaching", color: C.accent2, description: "Affianca e sviluppa il tuo team", scenarios: [
     { id: "co1", title: "Patto di Coaching", brief: "Stabilisci un patto di coaching con un tuo collaboratore/commerciale.", role_user: "Manager / Coach", role_ai: "Davide", role_ai_full: "Davide, collaboratore commerciale", ai_p: "Attende di capire cosa vuoi da lui. Se coinvolto e ascoltato, si apre e si impegna. Se percepisce imposizione o giudizio, si chiude e diventa passivo.", tips: ["Spiega cos'è il coaching e perché", "Definisci obiettivi condivisi", "Stabilisci regole e frequenza incontri", "Chiedi le sue aspettative", "Crea un clima di fiducia e alleanza"], eval: ["Chiarezza obiettivi", "Coinvolgimento", "Ascolto", "Costruzione fiducia", "Struttura del patto"] },
@@ -581,7 +605,7 @@ export default function App() {
               </div>
               {selectedCategory.scenarios.map(sc => (
                 <div key={sc.id} style={{ ...S.glass, cursor: "pointer", marginBottom: "10px", transition: "all 0.3s" }}
-                  onClick={() => { setSelectedScenario(sc); const isSL = isSLMode(selectedCategory?.id, sc.id); setDifficulty(isSL ? "mot_no_comp" : "medium"); checkDailyLimit(); nav("scenario"); }}
+                  onClick={() => { setSelectedScenario(sc); setDifficulty(getDefaultDiff(selectedCategory?.id, sc.id)); checkDailyLimit(); nav("scenario"); }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = selectedCategory.color + "44"; e.currentTarget.style.transform = "translateX(6px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
                   <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "4px" }}>{sc.title}</div>
@@ -618,7 +642,7 @@ export default function App() {
             <div style={{ background: `${C.teal}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.teal}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Parli con</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{selectedScenario.role_ai_full}</div></div>
           </div>
           <div style={{ marginTop: "18px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{isSLMode(cat?.id, selectedScenario?.id) ? "Tipo di collaboratore" : "Difficoltà"}</div>
+            <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{getDiffLabel(cat?.id, selectedScenario?.id)}</div>
             <div style={{ display: "grid", gridTemplateColumns: getDiffOptions(cat?.id, selectedScenario?.id).length === 4 ? "1fr 1fr" : "1fr 1fr 1fr", gap: "8px" }}>
               {getDiffOptions(cat?.id, selectedScenario?.id).map(d => (
                 <div key={d.id} onClick={() => setDifficulty(d.id)} style={{ background: difficulty === d.id ? `${d.color}18` : C.glass, border: `2px solid ${difficulty === d.id ? d.color : C.border}`, borderRadius: "12px", padding: "14px", cursor: "pointer", textAlign: "center", transition: "all 0.2s", transform: difficulty === d.id ? "scale(1.03)" : "scale(1)" }}>
