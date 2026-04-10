@@ -372,6 +372,14 @@ export default function App() {
     }
     if (parts.length === 0) parts.push({ type: "dialogue", text: text });
 
+    // Frequenze target: avatar 24kHz, voce fuori campo 12kHz
+    // Rapporto 2:1 → il pitch della voce fuori campo è dimezzato rispetto all'avatar
+    // SpeechSynthesis pitch range: 0.0 - 2.0 (1.0 = default)
+    const AVATAR_PITCH = 1.0;       // 24 kHz — voce naturale del personaggio
+    const AVATAR_RATE = 1.15;        // ritmo vivace, conversazionale
+    const NARRATOR_PITCH = 0.5;      // 12 kHz — un'ottava sotto (freq. dimezzata)
+    const NARRATOR_RATE = 0.78;      // ritmo lento, profondo, da speaker
+
     return new Promise(resolve => {
       synthRef.current.cancel();
       let idx = 0;
@@ -381,13 +389,11 @@ export default function App() {
         const u = new SpeechSynthesisUtterance(part.text);
         u.lang = "it-IT";
         if (part.type === "stage") {
-          // Voce fuori campo: più profonda, più lenta
-          u.rate = 0.85;
-          u.pitch = 0.65;
+          u.rate = NARRATOR_RATE;
+          u.pitch = NARRATOR_PITCH;
         } else {
-          // Voce del personaggio: normale
-          u.rate = 1.15;
-          u.pitch = 1.05;
+          u.rate = AVATAR_RATE;
+          u.pitch = AVATAR_PITCH;
         }
         const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
         if (v) u.voice = v;
