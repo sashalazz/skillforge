@@ -236,6 +236,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, stats });
   }
 
+  // ─── GET ENABLED SECTIONS (for all users) ──────────────────
+  if (action === "get_enabled_sections") {
+    const token = (req.headers.authorization || "").replace("Bearer ", "");
+    const decoded = verifyToken(token);
+    if (!decoded) return res.status(401).json({ error: "Non autenticato" });
+
+    const { data: config } = await supabase.from("sf_config").select("value").eq("key", "enabled_sections").single();
+    // If not set, all sections are enabled (null = all)
+    let sections = null;
+    if (config && config.value) {
+      try { sections = JSON.parse(config.value); } catch { sections = null; }
+    }
+    return res.status(200).json({ success: true, enabled_sections: sections });
+  }
+
   // ─── GET LEADERBOARD ──────────────────────────────────────
   if (action === "leaderboard") {
     const token = (req.headers.authorization || "").replace("Bearer ", "");
