@@ -141,8 +141,8 @@ export default async function handler(req, res) {
       const val = daily_limit === null || daily_limit === "" ? null : parseInt(daily_limit);
       await supabase.from("sf_users").update({ daily_limit: val }).eq("id", userId);
     } else if (enabled_sections !== undefined) {
-      // Set per-user enabled sections (null = all sections)
-      const val = enabled_sections === null ? null : JSON.stringify(enabled_sections);
+      // Set per-user enabled sections — always save as JSON array
+      const val = (enabled_sections && Array.isArray(enabled_sections)) ? JSON.stringify(enabled_sections) : null;
       try {
         await supabase.from("sf_users").update({ enabled_sections: val }).eq("id", userId);
       } catch {
