@@ -131,8 +131,8 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded) return res.status(401).json({ error: "Non autenticato" });
 
-    const { scenarioId, difficulty, score } = req.body;
-    await supabase.from("sf_scores").insert({ user_id: decoded.id, scenario_id: scenarioId, difficulty, score });
+    const { scenarioId, difficulty, score, duration_seconds } = req.body;
+    await supabase.from("sf_scores").insert({ user_id: decoded.id, scenario_id: scenarioId, difficulty, score, duration_seconds: duration_seconds || null });
     return res.status(200).json({ success: true });
   }
 
@@ -193,6 +193,47 @@ export default async function handler(req, res) {
       await supabase.from("sf_config").insert({ key, value: String(value) });
     }
     return res.status(200).json({ success: true });
+  }
+
+  // ─── ADMIN: USER STATS ─────────────────────────────────────
+  if (action === "admin_user_stats") {
+    const token = (req.headers.authorization || "").replace("Bearer ", "");
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.isAdmin) return res.status(403).json({ error: "Accesso negato" });
+
+    // Fetch all scores with user info
+    const { data: scores } = await supabase
+      .from("sf_scores")
+      .select("user_id, scenario_id, difficulty, score, duration_seconds, created_at")
+      .order("created_at", { ascending: false });
+
+    // Aggregate per user
+    const stats = {};
+    (scores || []).forEach(s => {
+      if (!stats[s.user_id]) {
+        stats[s.user_id] = {
+          lastAccess: s.created_at,
+          scenarios: [],
+          totalMinutes: 0,
+          totalScore: 0,
+          count: 0
+        };
+      }
+      const st = stats[s.user_id];
+      // lastAccess is already the most recent since ordered desc
+      st.scenarios.push({
+        scenarioId: s.scenario_id,
+        difficulty: s.difficulty,
+        score: s.score,
+        durationSeconds: s.duration_seconds,
+        date: s.created_at
+      });
+      if (s.duration_seconds) st.totalMinutes += s.duration_seconds / 60;
+      st.totalScore += s.score;
+      st.count += 1;
+    });
+
+    return res.status(200).json({ success: true, stats });
   }
 
   // ─── GET LEADERBOARD ──────────────────────────────────────
