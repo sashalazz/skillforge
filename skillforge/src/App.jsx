@@ -821,25 +821,26 @@ export default function App() {
                     try {
                       userSections = u.enabled_sections ? (typeof u.enabled_sections === "string" ? JSON.parse(u.enabled_sections) : u.enabled_sections) : null;
                     } catch { userSections = null; }
+                    // null = non ancora configurato → tutte abilitate di default
+                    const effectiveSections = userSections || CATEGORIES.map(c => c.id);
                     return (
                     <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "12px", color: C.muted, marginBottom: "8px" }}>Sezioni abilitate:</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                         {CATEGORIES.map(cat => {
-                          const isEnabled = !userSections || userSections.includes(cat.id);
+                          const isEnabled = effectiveSections.includes(cat.id);
                           return (
                             <div key={cat.id}
                               onClick={() => {
-                                const current = userSections || CATEGORIES.map(c => c.id);
                                 let next;
-                                if (current.includes(cat.id)) {
-                                  next = current.filter(id => id !== cat.id);
-                                  if (next.length === 0) return;
+                                if (isEnabled) {
+                                  next = effectiveSections.filter(id => id !== cat.id);
+                                  if (next.length === 0) return; // almeno 1
                                 } else {
-                                  next = [...current, cat.id];
+                                  next = [...effectiveSections, cat.id];
                                 }
-                                const allIds = CATEGORIES.map(c => c.id);
-                                setUserSections(u.id, next.length === allIds.length ? null : next);
+                                // Salva sempre l'array esplicito
+                                setUserSections(u.id, next);
                               }}
                               style={{
                                 display: "flex", alignItems: "center", gap: "6px",
