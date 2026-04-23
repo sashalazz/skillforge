@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS sf_scores (
   scenario_id TEXT NOT NULL,
   difficulty TEXT NOT NULL,
   score INTEGER NOT NULL,
+  duration_seconds INTEGER DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -51,3 +52,8 @@ CREATE POLICY "Service role full access config" ON sf_config FOR ALL USING (true
 -- NOTA: registrati normalmente dall'app con la TUA email,
 -- poi esegui questo comando per promuoverti admin:
 -- UPDATE sf_users SET approved = true, is_admin = true WHERE email = 'TUA_EMAIL@esempio.com';
+
+-- ═══════════════════════════════════════════════════════
+-- MIGRAZIONE: se hai già il database, aggiungi la colonna duration_seconds:
+-- ALTER TABLE sf_scores ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT NULL;
+-- ═══════════════════════════════════════════════════════
