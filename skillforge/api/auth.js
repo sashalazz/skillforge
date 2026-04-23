@@ -73,7 +73,12 @@ export default async function handler(req, res) {
     if (!user.approved) return res.status(403).json({ error: "Account in attesa di approvazione. Contatta l'amministratore." });
 
     const token = createToken(user.id, user.email, user.is_admin);
-    return res.status(200).json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin } });
+    // Parse enabled_sections
+    let enabledSections = null;
+    if (user.enabled_sections) {
+      try { enabledSections = JSON.parse(user.enabled_sections); } catch { enabledSections = null; }
+    }
+    return res.status(200).json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin, enabledSections } });
   }
 
   // ─── VERIFY TOKEN ─────────────────────────────────────────
@@ -82,10 +87,14 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded) return res.status(401).json({ error: "Token non valido" });
 
-    const { data: user } = await supabase.from("sf_users").select("id, name, email, is_admin, approved").eq("id", decoded.id).single();
+    const { data: user } = await supabase.from("sf_users").select("id, name, email, is_admin, approved, enabled_sections").eq("id", decoded.id).single();
     if (!user || !user.approved) return res.status(401).json({ error: "Accesso non autorizzato" });
 
-    return res.status(200).json({ success: true, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin } });
+    let enabledSections = null;
+    if (user.enabled_sections) {
+      try { enabledSections = JSON.parse(user.enabled_sections); } catch { enabledSections = null; }
+    }
+    return res.status(200).json({ success: true, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin, enabledSections } });
   }
 
   // ─── ADMIN: LIST USERS ────────────────────────────────────
@@ -94,7 +103,7 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.isAdmin) return res.status(403).json({ error: "Accesso negato" });
 
-    const { data: users } = await supabase.from("sf_users").select("id, email, name, approved, is_admin, daily_limit, created_at").order("created_at", { ascending: false });
+    const { data: users } = await supabase.from("sf_users").select("id, email, name, approved, is_admin, daily_limit, enabled_sections, created_at").order("created_at", { ascending: false });
 
     // Get global default
     const { data: config } = await supabase.from("sf_config").select("value").eq("key", "daily_limit").single();
@@ -109,7 +118,7 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.isAdmin) return res.status(403).json({ error: "Accesso negato" });
 
-    const { userId, approved, remove, daily_limit } = req.body;
+    const { userId, approved, remove, daily_limit, enabled_sections } = req.body;
     if (!userId) return res.status(400).json({ error: "userId richiesto" });
 
     if (remove) {
@@ -119,6 +128,10 @@ export default async function handler(req, res) {
       // Set per-user limit (null = use global default)
       const val = daily_limit === null || daily_limit === "" ? null : parseInt(daily_limit);
       await supabase.from("sf_users").update({ daily_limit: val }).eq("id", userId);
+    } else if (enabled_sections !== undefined) {
+      // Set per-user enabled sections (null = all sections)
+      const val = enabled_sections === null ? null : JSON.stringify(enabled_sections);
+      await supabase.from("sf_users").update({ enabled_sections: val }).eq("id", userId);
     } else {
       await supabase.from("sf_users").update({ approved }).eq("id", userId);
     }
@@ -234,21 +247,6 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({ success: true, stats });
-  }
-
-  // ─── GET ENABLED SECTIONS (for all users) ──────────────────
-  if (action === "get_enabled_sections") {
-    const token = (req.headers.authorization || "").replace("Bearer ", "");
-    const decoded = verifyToken(token);
-    if (!decoded) return res.status(401).json({ error: "Non autenticato" });
-
-    const { data: config } = await supabase.from("sf_config").select("value").eq("key", "enabled_sections").single();
-    // If not set, all sections are enabled (null = all)
-    let sections = null;
-    if (config && config.value) {
-      try { sections = JSON.parse(config.value); } catch { sections = null; }
-    }
-    return res.status(200).json({ success: true, enabled_sections: sections });
   }
 
   // ─── GET LEADERBOARD ──────────────────────────────────────
