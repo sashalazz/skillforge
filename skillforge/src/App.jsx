@@ -289,6 +289,9 @@ export default function App() {
   const [dailyLimit, setDailyLimit] = useState(5);
   const [dailyAllowed, setDailyAllowed] = useState(true);
   const [configLimit, setConfigLimit] = useState("5");
+  const [adminUserStats, setAdminUserStats] = useState({});
+  const [expandedUser, setExpandedUser] = useState(null);
+  const [sessionStartTime, setSessionStartTime] = useState(null);
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
@@ -385,6 +388,21 @@ export default function App() {
   const saveConfig = async (val) => {
     await authCall({ action: "admin_set_config", key: "daily_limit", value: val }, token);
     setConfigLimit(val);
+  };
+
+  // ─── Scenario title lookup ──────────────────────────────
+  const getScenarioTitle = (scenarioId) => {
+    for (const cat of CATEGORIES) {
+      const sc = cat.scenarios.find(s => s.id === scenarioId);
+      if (sc) return sc.title;
+    }
+    return scenarioId;
+  };
+
+  // ─── Admin user stats ──────────────────────────────────
+  const loadAdminUserStats = async () => {
+    const res = await authCall({ action: "admin_user_stats" }, token);
+    if (res.success) setAdminUserStats(res.stats || {});
   };
 
   // ─── AI ───────────────────────────────────────────────────
@@ -505,7 +523,7 @@ export default function App() {
       const bs = [6, 7, 5, 8, 6];
       parsed = { overall_score: 6, summary: "Buon impegno, serve più struttura.", scores: selectedScenario.eval.map((c, i) => ({ criterion: c, score: bs[i % 5], comment: `Lavora su "${c.toLowerCase()}".` })), strengths: ["Volontà", "Tono appropriato", "Focus"], improvements: ["Più domande aperte", "Più esempi", "Più struttura"], key_moment: "Il momento iniziale ha impostato il tono.", mistake_to_avoid: "Non saltare subito alla soluzione.", better_phrase: "'Devi migliorare' → 'Come vedi la situazione?'", academy_tip: "Regola 70/30: ascolta 70%, parla 30%." };
     }
-    await authCall({ action: "save_score", scenarioId: selectedScenario.id, difficulty, score: parsed.overall_score }, token);
+    await authCall({ action: "save_score", scenarioId: selectedScenario.id, difficulty, score: parsed.overall_score, duration_seconds: sessionStartTime ? Math.round((Date.now() - sessionStartTime) / 1000) : null }, token);
     checkDailyLimit();
     setReport(parsed); setIsGeneratingReport(false);
   }, [selectedScenario, difficulty, nav, token]);
@@ -685,7 +703,12 @@ export default function App() {
 
               {/* USERS */}
               <div style={{ fontSize: "13px", color: C.muted, marginBottom: "16px" }}>{adminUsers.length} utenti registrati</div>
-              {adminUsers.map(u => (
+              {adminUsers.map(u => {
+                const uStats = adminUserStats[u.id];
+                const avgScore = uStats ? Math.round((uStats.totalScore / uStats.count) * 10) / 10 : null;
+                const totalMin = uStats ? Math.round(uStats.totalMinutes) : 0;
+                const isExpanded = expandedUser === u.id;
+                return (
                 <div key={u.id} style={{ ...S.glass, marginBottom: "10px", padding: "16px 20px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
@@ -694,7 +717,7 @@ export default function App() {
                         {u.approved && !u.is_admin && <span style={{ ...S.chip(C.success), marginLeft: "6px" }}>Approvato</span>}
                         {!u.approved && <span style={{ ...S.chip(C.warn), marginLeft: "6px" }}>In attesa</span>}
                       </div>
-                      <div style={{ fontSize: "13px", color: C.muted }}>{u.email} · {new Date(u.created_at).toLocaleDateString("it")}</div>
+                      <div style={{ fontSize: "13px", color: C.muted }}>{u.email} · Registrato: {new Date(u.created_at).toLocaleDateString("it")}</div>
                     </div>
                     <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                       <button onClick={() => toggleApproval(u.id, u.approved)}
@@ -709,6 +732,67 @@ export default function App() {
                       )}
                     </div>
                   </div>
+
+                  {/* ── STATS ROW ── */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${C.border}` }}>
+                    <div style={{ background: "rgba(42,26,14,0.03)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted, marginBottom: "4px" }}>Ultimo accesso</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{uStats?.lastAccess ? new Date(uStats.lastAccess).toLocaleDateString("it", { day: "2-digit", month: "short", year: "numeric" }) : "Mai"}</div>
+                    </div>
+                    <div style={{ background: "rgba(42,26,14,0.03)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted, marginBottom: "4px" }}>Scenari svolti</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{uStats?.count || 0}</div>
+                    </div>
+                    <div style={{ background: "rgba(42,26,14,0.03)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted, marginBottom: "4px" }}>Minuti totali</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{totalMin > 0 ? totalMin : "–"}</div>
+                    </div>
+                    <div style={{ background: "rgba(42,26,14,0.03)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
+                      <div style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted, marginBottom: "4px" }}>Punteggio medio</div>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: avgScore != null ? (avgScore >= 8 ? C.success : avgScore >= 6 ? C.warn : C.danger) : C.muted }}>{avgScore != null ? avgScore + "/10" : "–"}</div>
+                    </div>
+                  </div>
+
+                  {/* ── EXPAND BUTTON ── */}
+                  {uStats?.count > 0 && (
+                    <div style={{ textAlign: "center", marginTop: "8px" }}>
+                      <button onClick={() => setExpandedUser(isExpanded ? null : u.id)}
+                        style={{ background: "none", border: "none", color: C.accent, fontSize: "12px", cursor: "pointer", fontFamily: "'DM Sans'", fontWeight: 500, padding: "4px 12px" }}>
+                        {isExpanded ? "▲ Chiudi dettagli" : "▼ Vedi dettagli scenari"}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── EXPANDED SCENARIO LIST ── */}
+                  {isExpanded && uStats?.scenarios && (
+                    <div style={{ marginTop: "8px", maxHeight: "300px", overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+                        <thead>
+                          <tr>
+                            {["Data", "Scenario", "Difficoltà", "Durata", "Punteggio"].map(h => (
+                              <th key={h} style={{ textAlign: h === "Punteggio" || h === "Durata" ? "center" : "left", padding: "6px 8px", fontSize: "10px", letterSpacing: "1.5px", textTransform: "uppercase", color: C.muted, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {uStats.scenarios.map((s, idx) => {
+                            const scCol = s.score >= 8 ? C.success : s.score >= 6 ? C.warn : C.danger;
+                            const durMin = s.durationSeconds ? Math.round(s.durationSeconds / 60) : null;
+                            return (
+                              <tr key={idx} style={{ borderBottom: `1px solid ${C.border}22` }}>
+                                <td style={{ padding: "8px", whiteSpace: "nowrap" }}>{new Date(s.date).toLocaleDateString("it", { day: "2-digit", month: "short" })}</td>
+                                <td style={{ padding: "8px", fontWeight: 500 }}>{getScenarioTitle(s.scenarioId)}</td>
+                                <td style={{ padding: "8px", color: C.muted }}>{s.difficulty}</td>
+                                <td style={{ padding: "8px", textAlign: "center", color: C.muted }}>{durMin != null ? durMin + " min" : "–"}</td>
+                                <td style={{ padding: "8px", textAlign: "center", fontWeight: 700, color: scCol }}>{s.score}/10</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
                   {!u.is_admin && (
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "12px", color: C.muted, flex: 1 }}>Sessioni/giorno:</div>
@@ -724,7 +808,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-              ))}
+              ); })}
             </div>
           )}
         </div>
@@ -741,7 +825,7 @@ export default function App() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
             <div style={{ fontSize: "13px", color: C.muted }}>Ciao, <span style={{ color: C.accent, fontWeight: 600 }}>{user?.name}</span></div>
             <div style={{ display: "flex", gap: "8px" }}>
-              {user?.isAdmin && <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px" }} onClick={() => { nav("admin"); loadAdminUsers(); loadConfig(); }}>👑 Admin</button>}
+              {user?.isAdmin && <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px" }} onClick={() => { nav("admin"); loadAdminUsers(); loadConfig(); loadAdminUserStats(); }}>👑 Admin</button>}
               <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px" }} onClick={() => { setShowLB(true); loadLB(); }}>🏆</button>
               <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px" }} onClick={logout}>Esci</button>
             </div>
@@ -841,7 +925,7 @@ export default function App() {
             </div>
           ) : (
             <div style={{ marginTop: "20px" }}>
-              <button style={{ ...S.btn(C.accent, true) }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); nav("roleplay"); }}>🎭 Inizia</button>
+              <button style={{ ...S.btn(C.accent, true) }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); setSessionStartTime(Date.now()); nav("roleplay"); }}>🎭 Inizia</button>
               <div style={{ textAlign: "center", fontSize: "12px", color: C.muted, marginTop: "8px" }}>{dailyUsed}/{dailyLimit} sessioni usate oggi · Max {MAX_TURNS} scambi per sessione</div>
             </div>
           )}
@@ -956,7 +1040,7 @@ export default function App() {
                 <div style={{ fontSize: "14px", color: "rgba(42,26,14,0.7)", lineHeight: 1.7, fontStyle: "italic" }}>"{report.academy_tip}"</div>
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <button style={{ ...S.btn(C.accent), flex: 1 }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); nav("roleplay"); }}>🔄 Riprova</button>
+                <button style={{ ...S.btn(C.accent), flex: 1 }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); setSessionStartTime(Date.now()); nav("roleplay"); }}>🔄 Riprova</button>
                 <button style={{ ...S.btnO, flex: 1 }} onClick={() => { setShowLB(true); loadLB(); }}>🏆</button>
                 <button style={{ ...S.btnO, flex: 1 }} onClick={restart}>🏠 Home</button>
               </div>
