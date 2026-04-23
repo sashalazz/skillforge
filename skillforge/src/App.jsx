@@ -30,6 +30,16 @@ const SL_CATEGORIES = ["feedback", "difficult", "coaching"];
 const SL_SCENARIOS = ["ld1", "co1", "co2", "co3"];
 const INF_SCENARIOS = ["ld3"];
 
+const DIFF_INGAGGIO = [
+  { id: "ing_colpa", label: "Senso di Colpa", icon: "😔", color: "#8E44AD", desc: "Sa che avrebbe dovuto farlo. Dice «sì, lo so... è un po' che ci penso...»" },
+  { id: "ing_paura", label: "Paura", icon: "😰", color: C.warn, desc: "Ha paura di perdere tempo, di essere raggirato o di essere scoperto." },
+  { id: "ing_disprezzo", label: "Disgusto / Disprezzo", icon: "😤", color: "#E67E22", desc: "Ha avuto o gli hanno raccontato un'esperienza negativa. Non si fida della compagnia." },
+  { id: "ing_rabbia", label: "Rabbia", icon: "😡", color: C.danger, desc: "Ha subito un danno importante o è stata delusa una sua aspettativa." },
+  { id: "ing_beffa", label: "Piacere della Beffa", icon: "😏", color: C.teal, desc: "Dice SÌ ma vi sta prendendo in giro. Continuerà a fare come gli pare." },
+];
+
+const INGAGGIO_SCENARIOS = ["ig1", "ig2", "ig3"];
+
 const DIFF_INF = [
   { id: "inf_collab", label: "Collaboratore", icon: "😐", color: C.warn, desc: "Competente ma demotivato. Ha smesso di rispettare le scadenze e la qualità è in calo.",
     role_ai: "Roberto", role_ai_full: "Roberto, senior account manager", role_user: "Responsabile commerciale",
@@ -46,21 +56,24 @@ const DIFF_INF = [
 ];
 
 function getDiffOptions(categoryId, scenarioId) {
+  if (INGAGGIO_SCENARIOS.includes(scenarioId)) return DIFF_INGAGGIO;
   if (INF_SCENARIOS.includes(scenarioId)) return DIFF_INF;
   return (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) ? DIFF_SL : DIFF;
 }
 
 function isSLMode(categoryId, scenarioId) {
-  return SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId) || INF_SCENARIOS.includes(scenarioId);
+  return SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId) || INF_SCENARIOS.includes(scenarioId) || INGAGGIO_SCENARIOS.includes(scenarioId);
 }
 
 function getDiffLabel(categoryId, scenarioId) {
+  if (INGAGGIO_SCENARIOS.includes(scenarioId)) return "Resistenza emotiva del cliente";
   if (INF_SCENARIOS.includes(scenarioId)) return "Chi vuoi influenzare";
   if (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) return "Tipo di collaboratore";
   return "Difficoltà";
 }
 
 function getDefaultDiff(categoryId, scenarioId) {
+  if (INGAGGIO_SCENARIOS.includes(scenarioId)) return "ing_colpa";
   if (INF_SCENARIOS.includes(scenarioId)) return "inf_collab";
   if (SL_CATEGORIES.includes(categoryId) || SL_SCENARIOS.includes(scenarioId)) return "mot_no_comp";
   return "medium";
@@ -73,6 +86,11 @@ function diffMod(d) {
   if (d === "mot_comp") return "\nMOTIVATO COMPETENTE: Sei esperto e motivato. Lavori in autonomia, porti risultati. Cerchi riconoscimento e delega. Se microgestito ti irriti. Se valorizzato dai il massimo. Max 2-3 frasi.";
   if (d === "comp_no_mot") return "\nCOMPETENTE NON MOTIVATO: Hai le competenze ma hai perso la motivazione. Sei disilluso, cinico o annoiato. Rispondi con distacco. Se il manager ascolta e coinvolge, ti apri. Se impone, ti chiudi ancora di più. Max 2-3 frasi.";
   if (d === "no_comp_no_mot") return "\nNON COMPETENTE E NON MOTIVATO: Non hai né le competenze né la motivazione. Sei passivo, evasivo, talvolta ostile. Cerchi scuse, minimizzi i problemi. Solo un approccio molto paziente e strutturato può sbloccarti. Max 3 frasi.";
+  if (d === "ing_colpa") return "\nSENSO DI COLPA: Sai che avresti dovuto farlo. Dici cose come 'Sì, lo so... è un po' che ci penso...'. Sei remissivo e un po' imbarazzato. Se il consulente ti PERDONA ('È normale, con il lavoro, i figli...') ti rilassi e ti apri. Se ti INDIRIZZA ('Adesso lo facciamo, così non dovrà preoccuparsene più') accetti. Se ti fa sentire in colpa pesantemente, ti chiudi. Max 2-3 frasi.";
+  if (d === "ing_paura") return "\nPAURA: Hai paura di perdere tempo o di essere raggirato. Dici cose come 'Non mi interessa, sono di fretta...'. Sei sbrigativo, diffidente. Se il consulente ALLEGGERISCE la situazione (si allontana dal tono formale, sdrammatizza), abbassi le difese. Se ti RASSICURA dicendo 'Con poco se la cava', inizi ad ascoltare. Se è troppo insistente o pressante, ti chiudi completamente. Max 2-3 frasi.";
+  if (d === "ing_disprezzo") return "\nDISGUSTO/DISPREZZO: Hai avuto o ti hanno raccontato un'esperienza negativa con le assicurazioni. Dici cose come 'Non mi interessa, è una truffa legalizzata...'. Sei sprezzante e cinico. Se il consulente EVIDENZIA interesse genuino ('Mi spiace sentirla parlare così, cosa le è successo?') e si fa raccontare la storia, inizi ad aprirti. Se poi ELABORA il tuo racconto con empatia ('Mi spiace per suo cugino...') e usa la tecnica della pecora nera per distinguersi, consideri la possibilità. Se minimizza la tua esperienza, ti arrabbi. Max 2-3 frasi.";
+  if (d === "ing_rabbia") return "\nRABBIA: Hai subito un danno importante o un'aspettativa delusa dalle assicurazioni. Sei visibilmente arrabbiato, alzi la voce. Se il consulente ti LASCIA SFOGARE in silenzio assoluto, senza sorridere, dopo un po' ti calmi. Se poi ti SOSTIENE dicendo 'Mi spiace, non ci siamo capiti' o chiede scusa (1. Mi dispiace, chiedo scusa. 2. Non succederà più. 3. Cosa posso fare per rimediare?), accetti di ascoltare. Se ti interrompe o reagisce alla rabbia, esplodi. Se eccessiva, minaccia di andartene. Max 2-3 frasi, usa *indicazioni sceniche*.";
+  if (d === "ing_beffa") return "\nPIACERE DELLA BEFFA: Stai prendendo in giro il consulente. Fai domande, sei molto preparato, sorridente. In realtà stai facendo il giro delle 7 chiese e poi farai la polizza dal tuo conoscente. Se il consulente è COMPLICE e te lo dice apertamente ('Caspita, molto preparato... sta facendo il giro e poi fa dal cugino? Fa bene, farei così anch'io'), resti sorpreso e confessi. Se poi ti INDIRIZZA ('Finisca il giro, poi venga con la migliore proposta e la confrontiamo'), accetti la sfida. Se è ingenuo e non se ne accorge, continui a prenderlo in giro. Max 2-3 frasi.";
   if (d === "inf_collab") return "";
   if (d === "inf_capo") return "";
   if (d === "inf_gruppo") return "";
@@ -105,6 +123,11 @@ const CATEGORIES = [
     { id: "co2", title: "Affiancare in Telefonata", brief: "Affianca un collaboratore/commerciale durante una telefonata con un cliente.", role_user: "Manager / Coach", role_ai: "Giulia", role_ai_full: "Giulia, commerciale in affiancamento", ai_p: "Sa che la stai osservando. Tesa e meno naturale del solito. Se la rassicuri e le dai spazio, migliora. Se intervieni troppo, si blocca e perde sicurezza.", tips: ["Briefing prima della chiamata", "Definisci il tuo ruolo di osservatore", "Lascia fare, intervieni solo se necessario", "Debriefing costruttivo dopo", "Valorizza cosa ha fatto bene"], eval: ["Preparazione", "Rispetto dello spazio", "Tempismo interventi", "Qualità debriefing", "Empowerment"] },
     { id: "co3", title: "Affiancare in Trattativa", brief: "Affianca un collaboratore/commerciale durante una trattativa con un cliente.", role_user: "Manager / Coach", role_ai: "Alessandro", role_ai_full: "Alessandro, commerciale in trattativa", ai_p: "Vuole dimostrare di essere all'altezza. In trattativa tende a concedere troppo per chiudere. Se lo guidi con discrezione, impara. Se lo correggi davanti al cliente, perde credibilità e fiducia.", tips: ["Allineatevi sulla strategia prima", "Definisci ruoli chiari in trattativa", "Segnali discreti per intervenire", "Non sminuire davanti al cliente", "Debriefing con feedback specifico"], eval: ["Preparazione strategica", "Gestione ruoli", "Discrezione", "Qualità debriefing", "Sviluppo competenze"] },
   ]},
+  { id: "ingaggio", icon: "🤝", label: "Ingaggio Cliente", color: "#2E86C1", description: "Ingaggia il cliente e gestisci le resistenze emotive", scenarios: [
+    { id: "ig1", title: "Ingaggio TCM – Cliente con Polizza Vita", brief: "Il tuo cliente ha già una polizza sulla vita (TCM). Devi scoprire com'è fatta, gestire la relazione, evidenziare eventuali gap nella copertura, rassicurare e proporre una soluzione migliorativa. Segui il processo: gestire relazione → evidenziare gap → area emotiva → rassicurare → condividere soluzione.", role_user: "Consulente assicurativo", role_ai: "Sig. Bianchi", role_ai_full: "Sig. Bianchi, cliente con polizza vita esistente", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Chiedi prima: 'Ha una polizza sulla vita? Com'è fatta?'", "Complimentati se ne ha una, poi indaga le caratteristiche", "Evidenzia i gap: 'Quindi i soldi vanno alla banca?'", "Usa domande a risposta SI: 'Può essere un problema?'", "Rassicura e chiudi: 'Vediamo insieme cosa possiamo fare'"], eval: ["Gestione della relazione iniziale", "Sviluppo consapevolezza emotiva", "Capacità di evidenziare i gap", "Rassicurazione e supporto", "Condivisione della soluzione"] },
+    { id: "ig2", title: "Ingaggio TCM – Cliente Senza Polizza Vita", brief: "Il tuo cliente NON ha una polizza sulla vita. Devi sviluppare consapevolezza emotiva facendogli capire il rischio, portarlo nell'area emotiva, rassicurare e proporre una soluzione. Segui il processo: evidenziare i gap → sviluppare consapevolezza → area emotiva → rassicurare → chiudere.", role_user: "Consulente assicurativo", role_ai: "Sig.ra Rossi", role_ai_full: "Sig.ra Rossi, cliente senza polizza vita", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Evidenzia il gap: 'Se venisse a mancare, la famiglia dovrebbe pagare il mutuo'", "Quantifica in euro: 'Pagare senza il suo reddito di X.000€ può essere un problema?'", "Porta nell'area emotiva con domande a risposta SI", "Rassicura: 'Mi spiace parlarle di un tema così spaventoso, ma con poco se la cava'", "Chiudi con curiosità: lascia che chieda 'Poco quanto?'"], eval: ["Sviluppo consapevolezza emotiva", "Quantificazione economica del rischio", "Gestione dell'area emotiva", "Rassicurazione efficace", "Chiusura verso la soluzione"] },
+    { id: "ig3", title: "Ingaggio Infortuni e Coperture", brief: "Il tuo cliente ha già una polizza vita ma non ha copertura infortuni/invalidità. Devi indagare altri rischi non coperti, sviluppare consapevolezza emotiva sul gap e proporre una copertura complementare. Segui il processo: complimenti → indagare altri rischi → area emotiva → rassicurare → soluzione.", role_user: "Consulente assicurativo", role_ai: "Sig. Verdi", role_ai_full: "Sig. Verdi, cliente con polizza vita ma senza copertura infortuni", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Complimentati per la polizza vita esistente", "Indaga: 'E se invece di morire si fa così male da non poter più lavorare?'", "Chiedi: 'Ce l'ha una copertura infortuni/invalidità?'", "Sviluppa consapevolezza sul gap specifico", "Rassicura e proponi la soluzione complementare"], eval: ["Valorizzazione copertura esistente", "Esplorazione rischi non coperti", "Sviluppo consapevolezza emotiva", "Gestione della resistenza", "Proposta soluzione complementare"] },
+  ]},
   { id: "emotional", icon: "🧠", label: "Intelligenza Emotiva", color: "#E17055", description: "Gestisci emozioni", scenarios: [
     { id: "ei1", title: "Collega in Burnout", brief: "Collega in burnout. Affronta con sensibilità.", role_user: "Team Lead", role_ai: "Chiara", role_ai_full: "Chiara, in burnout", ai_p: "Esausta, nasconde. Minimizza. Empatia=si apre. Diretto=si chiude.", tips: ["Momento privato", "Senza giudizio", "Ascolta 80%", "Supporto non soluzioni", "Rispetta confini"], eval: ["Empatia", "Ascolto", "Confini", "Supporto", "Non giudizio"] },
     { id: "ei2", title: "Collaboratore Arrabbiato", brief: "Il tuo collaboratore è furioso perché il suo progetto è stato assegnato a un altro collega senza preavviso. Entra nel tuo ufficio visibilmente alterato, con il viso rosso e la voce alzata. Devi gestire la sua rabbia senza alimentarla.", role_user: "Manager", role_ai: "Stefano", role_ai_full: "Stefano, collaboratore furioso", ai_p: "Sei Stefano, furioso. Il tuo progetto a cui lavoravi da 3 mesi è stato dato ad un altro senza nemmeno avvisarti. Ti senti tradito e non rispettato. Entri nell'ufficio del capo sbattendo la porta. Parli a voce alta, interrompi, usi frasi come 'È inaccettabile!', 'Non me lo merito!', 'Sempre le stesse cose qui!'. Se il manager ti lascia sfogare senza reagire, poi inizia ad abbassare i toni e spieghi cosa ti ha ferito davvero. Se ti dice di calmarti o minimizza, esplodi ancora di più. Se riconosce il tuo diritto di essere arrabbiato, ti apri. Max 2-3 frasi, mostra la rabbia con *indicazioni sceniche*.", tips: ["Lascia sfogare senza interrompere", "Non dire 'calmati'", "Riconosci l'emozione: 'Capisco che sei arrabbiato'", "Separa l'emozione dal problema", "Affronta i fatti solo quando la temperatura scende"], eval: ["Gestione dello sfogo", "Riconoscimento emozione", "Contenimento senza repressione", "Tempi di intervento", "Orientamento alla soluzione"] },
@@ -122,17 +145,63 @@ function getInfVariant(d) {
 
 function sysPr(sc, d) {
   const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
+  const isIngaggio = INGAGGIO_SCENARIOS.includes(sc.id);
   const role = inf ? inf.role_ai_full : sc.role_ai_full;
   const brief = inf ? inf.brief : sc.brief;
   const personality = inf ? inf.ai_p : sc.ai_p;
+  
+  if (isIngaggio) {
+    const ingaggioFramework = `\nFRAMEWORK INGAGGIO CLIENTE (segui rigorosamente):
+Il processo decisionale del cliente ha 3 fasi che il consulente deve guidare:
+1. SVILUPPARE CONSAPEVOLEZZA EMOTIVA: Il consulente deve partire dall'evento concreto, quantificarlo in euro (€), e portarti nell'area emotiva facendoti capire l'impatto sulla tua vita/famiglia.
+2. ASSUMERSI LA RESPONSABILITÀ: Tu devi verbalizzare il tuo disagio. Il consulente deve supportarti e rassicurarti. Poi condivide la soluzione e le risorse economiche disponibili.
+3. EFFETTUARE IL CAMBIAMENTO: Solo alla fine, compilare il modulo / chiudere.
+
+IMPORTANTE: Tu sei un cliente assicurativo reale. Reagisci in modo naturale alle domande del consulente. Se il consulente segue bene il processo (evento → quantificazione € → area emotiva → rassicurazione → soluzione), ti apri progressivamente. Se salta passaggi o va troppo veloce alla chiusura, resisti.`;
+    
+    return `Sei ${role} in un roleplay di vendita assicurativa. Contesto: ${brief}\nPersonalità base: ${personality}\n${ingaggioFramework}\nRegole: personaggio, italiano, breve, realistico. Non dare consigli. Dopo 10 scambi cerca di concludere naturalmente.\nIndicazioni sceniche: metti tra asterischi *così* le espressioni facciali e i gesti. Usa le espressioni del volto che corrispondono alla tua emozione:\n- Gioia: zampe di gallina agli occhi, angoli bocca sollevati\n- Sorpresa: sopracciglia sollevate, mascella abbassata, occhi spalancati\n- Rabbia: sopracciglia abbassate e ravvicinate, sguardo fisso, narici dilatate\n- Disgusto: naso arricciato, labbro superiore sollevato\n- Paura: sopracciglia sollevate e ravvicinate, bocca aperta, palpebre sollevate\n- Tristezza: angoli interni sopracciglia sollevati, angoli bocca in giù, palpebre allentate${diffMod(d)}`;
+  }
+  
   return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.\nIndicazioni sceniche: quando vuoi descrivere azioni, gesti, espressioni o atmosfera (es. sospira, si alza, guarda l'orologio, incrocia le braccia), mettile tra asterischi *così*. Queste parti verranno lette da una voce fuori campo. Usale con moderazione per arricchire la scena.${diffMod(d)}`;
 }
 function evalPr(sc, convo, d) {
   const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
+  const isIngaggio = INGAGGIO_SCENARIOS.includes(sc.id);
   const aiName = inf ? inf.role_ai : sc.role_ai;
   const brief = inf ? inf.brief : sc.brief;
   const roleUser = inf ? inf.role_user : sc.role_user;
   const t = convo.map(m => `${m.role === "user" ? "UTENTE" : aiName}: ${m.text}`).join("\n");
+  
+  if (isIngaggio) {
+    const resistenzaLabel = DIFF_INGAGGIO.find(x => x.id === d)?.label || d;
+    return `Executive coach specializzato in vendita assicurativa e ingaggio emotivo del cliente. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO (il consulente doveva seguire questo processo):
+1. SVILUPPARE CONSAPEVOLEZZA EMOTIVA: Evento → Quantificazione in € → Portare il cliente nell'area emotiva
+2. ASSUMERSI LA RESPONSABILITÀ: Verbalizzare il disagio → Supportare e rassicurare → Condividere soluzione e risorse economiche
+3. EFFETTUARE IL CAMBIAMENTO: Chiudere la trattativa / compilare il modulo
+
+GESTIONE RESISTENZA EMOTIVA: Il cliente mostrava "${resistenzaLabel}". Le tecniche corrette dal framework sono:
+- SENSO DI COLPA: (1) Verbalizzare il perdono ("è normale, con il lavoro, i figli...") (2) Indirizzare ("adesso lo facciamo perché non vorrei poi che...")
+- PAURA: (1) Alleggerire (allontanarsi dal tono formale) (2) Rassicurare ("con poco se la cava")
+- DISGUSTO/DISPREZZO: (1) Evidenziare con empatia ("cosa le è successo?") (2) Elaborare (tecnica della pecora nera)
+- RABBIA: (1) Lasciar sfogare in silenzio assoluto (2) Sostenere con scuse strutturate (mi dispiace, non succederà più, cosa posso fare?)
+- PIACERE DELLA BEFFA: (1) Essere complici per far confessare (2) Indirizzare ("finisca il giro poi confrontiamo")
+
+Scenario: ${brief} | Resistenza: ${resistenzaLabel} | Utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+${t}
+
+Sii ONESTO. Punteggi DIVERSI (4-9). Valuta SPECIFICAMENTE:
+- Ha seguito la sequenza del processo decisionale? (evento → quantificazione € → area emotiva → rassicurazione → soluzione)
+- Ha riconosciuto e gestito correttamente la resistenza emotiva "${resistenzaLabel}" usando le tecniche appropriate?
+- Ha usato domande a risposta SI per sviluppare consapevolezza?
+- Ha rassicurato prima di proporre la soluzione?
+
+3 forze, 3 miglioramenti CONCRETI con RIFERIMENTI SPECIFICI alle tecniche del framework.
+SOLO JSON:
+{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio e riferimento al framework."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio e tecnica corretta dal framework.","better_phrase":"ORIG → MIGLIORE (usando la tecnica del framework)","academy_tip":"Tecnica pratica dal framework di ingaggio emotivo."}`;
+  }
+  
   return `Executive coach. Valuta roleplay (${d}). Scenario: ${brief} | Utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}\n${t}\nSii ONESTO. Punteggi DIVERSI (4-9). Commenti con ESEMPI. 3 forze, 3 miglioramenti CONCRETI.\nSOLO JSON:\n{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio.","better_phrase":"ORIG → MIGLIORE","academy_tip":"Tecnica pratica."}`;
 }
 
@@ -745,7 +814,7 @@ export default function App() {
           </div>
           <div style={{ marginTop: "18px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{getDiffLabel(cat?.id, selectedScenario?.id)}</div>
-            <div style={{ display: "grid", gridTemplateColumns: getDiffOptions(cat?.id, selectedScenario?.id).length === 4 ? "1fr 1fr" : "1fr 1fr 1fr", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: getDiffOptions(cat?.id, selectedScenario?.id).length >= 5 ? "1fr 1fr 1fr" : getDiffOptions(cat?.id, selectedScenario?.id).length === 4 ? "1fr 1fr" : "1fr 1fr 1fr", gap: "8px" }}>
               {getDiffOptions(cat?.id, selectedScenario?.id).map(d => (
                 <div key={d.id} onClick={() => setDifficulty(d.id)} style={{ background: difficulty === d.id ? `${d.color}18` : C.glass, border: `2px solid ${difficulty === d.id ? d.color : C.border}`, borderRadius: "12px", padding: "14px", cursor: "pointer", textAlign: "center", transition: "all 0.2s", transform: difficulty === d.id ? "scale(1.03)" : "scale(1)" }}>
                   <div style={{ fontSize: "22px", marginBottom: "4px" }}>{d.icon}</div>
@@ -784,7 +853,7 @@ export default function App() {
   // ═══ ROLEPLAY ═══
   if (screen === "roleplay") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF].find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(d => d.id === difficulty);
     const infVar = INF_SCENARIOS.includes(selectedScenario?.id) ? getInfVariant(difficulty) : null;
     const dispRoleAiShort = infVar ? infVar.role_ai : selectedScenario.role_ai;
     const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
@@ -836,7 +905,7 @@ export default function App() {
   // ═══ REPORT ═══
   if (screen === "report") {
     if (!selectedScenario) { setScreen("home"); return null; }
-    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF].find(d => d.id === difficulty);
+    const di = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(d => d.id === difficulty);
     return (
       <div style={S.app}><style>{CSS}</style>
         {showLB && <LBModal />}
