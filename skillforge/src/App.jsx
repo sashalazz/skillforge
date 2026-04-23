@@ -292,6 +292,8 @@ export default function App() {
   const [adminUserStats, setAdminUserStats] = useState({});
   const [expandedUser, setExpandedUser] = useState(null);
   const [sessionStartTime, setSessionStartTime] = useState(null);
+  const [enabledSections, setEnabledSections] = useState(null); // null = all enabled
+  const [adminEnabledSections, setAdminEnabledSections] = useState(null); // for admin panel editing
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
@@ -308,7 +310,7 @@ export default function App() {
     const saved = localStorage.getItem("sf_token");
     if (saved) {
       authCall({ action: "verify" }, saved).then(res => {
-        if (res.success) { setUser(res.user); setToken(saved); setScreen("home"); }
+        if (res.success) { setUser(res.user); setToken(saved); setScreen("home"); authCall({ action: "get_enabled_sections" }, saved).then(r => { if (r.success) setEnabledSections(r.enabled_sections); }); }
         else { localStorage.removeItem("sf_token"); setScreen("auth"); }
         setAnimateIn(true);
       }).catch(() => { setScreen("auth"); setAnimateIn(true); });
@@ -325,6 +327,7 @@ export default function App() {
     if (res.success) {
       localStorage.setItem("sf_token", res.token);
       setToken(res.token); setUser(res.user); setFormEmail(""); setFormPass("");
+      loadEnabledSections(res.token);
       nav("home");
     } else setAuthError(res.error || "Errore login");
   };
@@ -383,11 +386,29 @@ export default function App() {
   const loadConfig = async () => {
     const res = await authCall({ action: "admin_get_config" }, token);
     if (res.success && res.config?.daily_limit) setConfigLimit(res.config.daily_limit);
+    if (res.success && res.config?.enabled_sections) {
+      try { setAdminEnabledSections(JSON.parse(res.config.enabled_sections)); } catch { setAdminEnabledSections(null); }
+    } else {
+      setAdminEnabledSections(null);
+    }
   };
 
   const saveConfig = async (val) => {
     await authCall({ action: "admin_set_config", key: "daily_limit", value: val }, token);
     setConfigLimit(val);
+  };
+
+  const loadEnabledSections = async (t) => {
+    const res = await authCall({ action: "get_enabled_sections" }, t || token);
+    if (res.success) setEnabledSections(res.enabled_sections);
+  };
+
+  const saveEnabledSections = async (sections) => {
+    // sections = array of category IDs or null (all)
+    const value = sections ? JSON.stringify(sections) : JSON.stringify(CATEGORIES.map(c => c.id));
+    await authCall({ action: "admin_set_config", key: "enabled_sections", value }, token);
+    setAdminEnabledSections(sections);
+    setEnabledSections(sections);
   };
 
   // ─── Scenario title lookup ──────────────────────────────
@@ -701,6 +722,62 @@ export default function App() {
                 <div style={{ fontSize: "12px", color: C.muted, marginTop: "10px" }}>Max scambi per sessione: {MAX_TURNS} (fisso — l'avatar chiude automaticamente)</div>
               </div>
 
+              {/* ENABLED SECTIONS */}
+              <div style={{ ...S.glass, marginBottom: "20px" }}>
+                <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "14px" }}>📚 Sezioni abilitate</div>
+                <div style={{ fontSize: "12px", color: C.muted, marginBottom: "12px" }}>Seleziona le sezioni su cui gli utenti possono allenarsi</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "8px" }}>
+                  {CATEGORIES.map(cat => {
+                    const isEnabled = !adminEnabledSections || adminEnabledSections.includes(cat.id);
+                    return (
+                      <div key={cat.id}
+                        onClick={() => {
+                          const current = adminEnabledSections || CATEGORIES.map(c => c.id);
+                          let next;
+                          if (current.includes(cat.id)) {
+                            next = current.filter(id => id !== cat.id);
+                            if (next.length === 0) return; // almeno 1 sezione
+                          } else {
+                            next = [...current, cat.id];
+                          }
+                          setAdminEnabledSections(next);
+                        }}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "10px",
+                          background: isEnabled ? `${cat.color}15` : "rgba(42,26,14,0.03)",
+                          border: `2px solid ${isEnabled ? cat.color : C.border}`,
+                          borderRadius: "12px", padding: "12px 14px", cursor: "pointer",
+                          transition: "all 0.2s", opacity: isEnabled ? 1 : 0.5
+                        }}>
+                        <div style={{ fontSize: "22px" }}>{cat.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: "13px", fontWeight: 600, color: isEnabled ? C.text : C.muted }}>{cat.label}</div>
+                          <div style={{ fontSize: "11px", color: C.muted }}>{cat.scenarios.length} scenari</div>
+                        </div>
+                        <div style={{
+                          width: "22px", height: "22px", borderRadius: "6px",
+                          background: isEnabled ? cat.color : "transparent",
+                          border: `2px solid ${isEnabled ? cat.color : C.border}`,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: "12px", color: "#fff", fontWeight: 700,
+                          transition: "all 0.2s"
+                        }}>{isEnabled ? "✓" : ""}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", gap: "8px" }}>
+                  <button style={{ ...S.btnO, padding: "8px 16px", fontSize: "13px" }}
+                    onClick={() => setAdminEnabledSections(null)}>
+                    Seleziona tutte
+                  </button>
+                  <button style={{ ...S.btn(C.success), padding: "8px 16px", fontSize: "13px" }}
+                    onClick={() => saveEnabledSections(adminEnabledSections)}>
+                    Salva sezioni
+                  </button>
+                </div>
+              </div>
+
               {/* USERS */}
               <div style={{ fontSize: "13px", color: C.muted, marginBottom: "16px" }}>{adminUsers.length} utenti registrati</div>
               {adminUsers.map(u => {
@@ -836,7 +913,7 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {CATEGORIES.map(cat => (
+              {CATEGORIES.filter(cat => !enabledSections || enabledSections.includes(cat.id)).map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
