@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS sf_config (
 -- Inserisci il limite giornaliero di default (5 sessioni)
 INSERT INTO sf_config (key, value) VALUES ('daily_limit', '5') ON CONFLICT (key) DO NOTHING;
 
+-- Sezioni abilitate (default: tutte — null significa tutte attive)
+-- Per abilitare solo alcune sezioni, inserisci un JSON array con gli ID delle categorie:
+-- INSERT INTO sf_config (key, value) VALUES ('enabled_sections', '["feedback","difficult","sales","leadership","coaching","ingaggio"]') ON CONFLICT (key) DO NOTHING;
+
 -- 4. Abilita Row Level Security
 ALTER TABLE sf_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sf_scores ENABLE ROW LEVEL SECURITY;
