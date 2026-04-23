@@ -842,15 +842,15 @@ export default function App() {
                                 setUserSections(u.id, next.length === allIds.length ? null : next);
                               }}
                               style={{
-                                display: "flex", alignItems: "center", gap: "5px",
-                                background: isEnabled ? `${cat.color}15` : "rgba(42,26,14,0.03)",
-                                border: `1.5px solid ${isEnabled ? cat.color : C.border}`,
-                                borderRadius: "8px", padding: "5px 10px", cursor: "pointer",
-                                transition: "all 0.2s", opacity: isEnabled ? 1 : 0.45,
+                                display: "flex", alignItems: "center", gap: "6px",
+                                background: isEnabled ? `${cat.color}25` : "#e8e8e8",
+                                border: `2px solid ${isEnabled ? cat.color : "#ccc"}`,
+                                borderRadius: "8px", padding: "6px 12px", cursor: "pointer",
+                                transition: "all 0.2s",
                                 fontSize: "12px"
                               }}>
-                              <span>{cat.icon}</span>
-                              <span style={{ fontWeight: 600, color: isEnabled ? C.text : C.muted }}>{cat.label}</span>
+                              <span style={{ filter: isEnabled ? "none" : "grayscale(1)", opacity: isEnabled ? 1 : 0.4 }}>{cat.icon}</span>
+                              <span style={{ fontWeight: 600, color: isEnabled ? cat.color : "#999" }}>{cat.label}</span>
                             </div>
                           );
                         })}
