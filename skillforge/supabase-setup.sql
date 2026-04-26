@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS sf_users (
   approved BOOLEAN DEFAULT FALSE,
   is_admin BOOLEAN DEFAULT FALSE,
   daily_limit INTEGER DEFAULT NULL,
-  enabled_sections TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -57,6 +56,4 @@ CREATE POLICY "Service role full access config" ON sf_config FOR ALL USING (true
 -- ═══════════════════════════════════════════════════════
 -- MIGRAZIONE: se hai già il database, aggiungi la colonna duration_seconds:
 -- ALTER TABLE sf_scores ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT NULL;
--- MIGRAZIONE: aggiungi la colonna enabled_sections per gestire le sezioni per utente:
--- ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS enabled_sections TEXT DEFAULT NULL;
 -- ═══════════════════════════════════════════════════════
