@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS sf_users (
   daily_limit INTEGER DEFAULT NULL,
   allowed_sections JSONB DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
+  ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS allowed_sections JSONB DEFAULT NULL;
 );
-ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS allowed_sections JSONB DEFAULT NULL;
 
 -- 2. Tabella punteggi (per leaderboard)
 CREATE TABLE IF NOT EXISTS sf_scores (
