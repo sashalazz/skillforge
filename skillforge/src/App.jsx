@@ -295,6 +295,7 @@ export default function App() {
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
+  const audioRef = useRef(null);
   const convoRef = useRef([]);
 
   useEffect(() => { convoRef.current = conversation; }, [conversation]);
@@ -446,7 +447,6 @@ export default function App() {
   }, [parseStageDirections]);
 
   const speak = useCallback((text) => {
-    if (!synthRef.current) return Promise.resolve();
     const parts = [];
     const regex = /\*([^*]+)\*/g;
     let lastIndex = 0;
@@ -465,38 +465,72 @@ export default function App() {
     }
     if (parts.length === 0) parts.push({ type: "dialogue", text: text });
 
-    // Frequenze target: avatar 24kHz, voce fuori campo 12kHz
-    // Rapporto 2:1 → il pitch della voce fuori campo è dimezzato rispetto all'avatar
-    // SpeechSynthesis pitch range: 0.0 - 2.0 (1.0 = default)
-    const AVATAR_PITCH = 1.0;       // 24 kHz — voce naturale del personaggio
-    const AVATAR_RATE = 1.15;        // ritmo vivace, conversazionale
-    const NARRATOR_PITCH = 0.5;      // 12 kHz — un'ottava sotto (freq. dimezzata)
-    const NARRATOR_RATE = 0.78;      // ritmo lento, profondo, da speaker
+    // Narrator voice settings (browser TTS fallback for stage directions)
+    const NARRATOR_PITCH = 0.5;
+    const NARRATOR_RATE = 0.78;
 
-    return new Promise(resolve => {
-      synthRef.current.cancel();
-      let idx = 0;
-      const speakNext = () => {
-        if (idx >= parts.length) { setIsSpeaking(false); resolve(); return; }
-        const part = parts[idx];
-        const u = new SpeechSynthesisUtterance(part.text);
-        u.lang = "it-IT";
-        if (part.type === "stage") {
-          u.rate = NARRATOR_RATE;
-          u.pitch = NARRATOR_PITCH;
-        } else {
-          u.rate = AVATAR_RATE;
-          u.pitch = AVATAR_PITCH;
+    // ElevenLabs TTS for dialogue parts
+    const speakElevenLabs = (dialogueText) => {
+      return new Promise(async (resolve) => {
+        try {
+          const r = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: dialogueText }),
+          });
+          if (!r.ok) throw new Error("TTS request failed");
+          const blob = await r.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.onplay = () => setIsSpeaking(true);
+          audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+          audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
+          audio.play().catch(() => resolve());
+        } catch {
+          // Fallback to browser TTS if ElevenLabs fails
+          if (synthRef.current) {
+            const u = new SpeechSynthesisUtterance(dialogueText);
+            u.lang = "it-IT"; u.rate = 1.15; u.pitch = 1.0;
+            const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
+            if (v) u.voice = v;
+            u.onstart = () => setIsSpeaking(true);
+            u.onend = () => resolve();
+            u.onerror = () => resolve();
+            synthRef.current.speak(u);
+          } else resolve();
         }
+      });
+    };
+
+    // Browser TTS for stage directions (narrator voice)
+    const speakNarrator = (stageText) => {
+      return new Promise((resolve) => {
+        if (!synthRef.current) { resolve(); return; }
+        const u = new SpeechSynthesisUtterance(stageText);
+        u.lang = "it-IT"; u.rate = NARRATOR_RATE; u.pitch = NARRATOR_PITCH;
         const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
         if (v) u.voice = v;
-        if (idx === 0) u.onstart = () => setIsSpeaking(true);
-        u.onend = () => { idx++; speakNext(); };
-        u.onerror = () => { idx++; speakNext(); };
+        u.onend = () => resolve();
+        u.onerror = () => resolve();
         synthRef.current.speak(u);
-      };
-      speakNext();
-    });
+      });
+    };
+
+    // Sequential playback of all parts
+    return (async () => {
+      if (synthRef.current) synthRef.current.cancel();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+      setIsSpeaking(true);
+      for (const part of parts) {
+        if (part.type === "stage") {
+          await speakNarrator(part.text);
+        } else {
+          await speakElevenLabs(part.text);
+        }
+      }
+      setIsSpeaking(false);
+    })();
   }, []);
 
   const startListening = useCallback(() => {
