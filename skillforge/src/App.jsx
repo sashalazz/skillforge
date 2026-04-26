@@ -363,6 +363,20 @@ export default function App() {
     await authCall({ action: "admin_update_user", userId, daily_limit: limit }, token);
     loadAdminUsers();
   };
+  const toggleSection = async (userId, currentSections, sectionId) => {
+    // currentSections: null = all allowed, or array of allowed section ids
+    const allIds = CATEGORIES.map(c => c.id);
+    let sections = currentSections ? [...currentSections] : [...allIds];
+    if (sections.includes(sectionId)) {
+      sections = sections.filter(s => s !== sectionId);
+    } else {
+      sections.push(sectionId);
+    }
+    // If all are selected, store null (= all allowed)
+    const val = sections.length === allIds.length ? null : sections;
+    await authCall({ action: "admin_update_user", userId, allowed_sections: val }, token);
+    loadAdminUsers();
+  };
 
   // ─── Leaderboard from DB ──────────────────────────────────
   const loadLB = async () => {
@@ -828,6 +842,38 @@ export default function App() {
                   )}
 
                   {!u.is_admin && (
+                    <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "8px" }}>📚 Sezioni abilitate</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                        {CATEGORIES.map(cat => {
+                          const allIds = CATEGORIES.map(c => c.id);
+                          const userSections = u.allowed_sections || allIds;
+                          const isEnabled = userSections.includes(cat.id);
+                          return (
+                            <div key={cat.id}
+                              onClick={() => toggleSection(u.id, u.allowed_sections, cat.id)}
+                              style={{
+                                display: "flex", alignItems: "center", gap: "5px",
+                                padding: "6px 12px", borderRadius: "10px", cursor: "pointer",
+                                fontSize: "12px", fontWeight: 600,
+                                transition: "all 0.2s",
+                                background: isEnabled ? `${cat.color}18` : "rgba(42,26,14,0.04)",
+                                border: `1.5px solid ${isEnabled ? cat.color : "rgba(42,26,14,0.12)"}`,
+                                color: isEnabled ? cat.color : "rgba(42,26,14,0.25)",
+                                opacity: isEnabled ? 1 : 0.6,
+                                filter: isEnabled ? "none" : "grayscale(100%)",
+                              }}>
+                              <span style={{ fontSize: "14px" }}>{cat.icon}</span>
+                              <span>{cat.label}</span>
+                              {isEnabled && <span style={{ fontSize: "10px", marginLeft: "2px" }}>✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {!u.is_admin && (
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "12px", color: C.muted, flex: 1 }}>Sessioni/giorno:</div>
                       <select
@@ -870,7 +916,12 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {CATEGORIES.map(cat => (
+              {CATEGORIES.filter(cat => {
+                if (user?.isAdmin) return true;
+                const allowed = user?.allowedSections;
+                if (!allowed) return true; // null = all allowed
+                return allowed.includes(cat.id);
+              }).map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
