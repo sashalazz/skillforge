@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     if (!user.approved) return res.status(403).json({ error: "Account in attesa di approvazione. Contatta l'amministratore." });
 
     const token = createToken(user.id, user.email, user.is_admin);
-    return res.status(200).json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin, allowedSections: user.allowed_sections } });
+    return res.status(200).json({ success: true, token, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin, allowedSections: user.allowed_sections || null } });
   }
 
   // ─── VERIFY TOKEN ─────────────────────────────────────────
@@ -82,7 +82,11 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded) return res.status(401).json({ error: "Token non valido" });
 
-    const { data: user } = await supabase.from("sf_users").select("id, name, email, is_admin, approved, allowed_sections").eq("id", decoded.id).single();
+    let { data: user, error: userErr } = await supabase.from("sf_users").select("id, name, email, is_admin, approved, allowed_sections").eq("id", decoded.id).single();
+    if (userErr) {
+      const fallback = await supabase.from("sf_users").select("id, name, email, is_admin, approved").eq("id", decoded.id).single();
+      user = fallback.data ? { ...fallback.data, allowed_sections: null } : null;
+    }
     if (!user || !user.approved) return res.status(401).json({ error: "Accesso non autorizzato" });
 
     return res.status(200).json({ success: true, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.is_admin, allowedSections: user.allowed_sections } });
@@ -94,7 +98,13 @@ export default async function handler(req, res) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.isAdmin) return res.status(403).json({ error: "Accesso negato" });
 
-    const { data: users } = await supabase.from("sf_users").select("id, email, name, approved, is_admin, daily_limit, allowed_sections, created_at").order("created_at", { ascending: false });
+    let { data: users, error } = await supabase.from("sf_users").select("id, email, name, approved, is_admin, daily_limit, allowed_sections, created_at").order("created_at", { ascending: false });
+    
+    // Fallback: if allowed_sections column doesn't exist yet, query without it
+    if (error) {
+      const fallback = await supabase.from("sf_users").select("id, email, name, approved, is_admin, daily_limit, created_at").order("created_at", { ascending: false });
+      users = (fallback.data || []).map(u => ({ ...u, allowed_sections: null }));
+    }
 
     // Get global default
     const { data: config } = await supabase.from("sf_config").select("value").eq("key", "daily_limit").single();
@@ -117,7 +127,10 @@ export default async function handler(req, res) {
       await supabase.from("sf_users").delete().eq("id", userId);
     } else if (allowed_sections !== undefined) {
       // Set per-user allowed sections (null = all allowed)
-      await supabase.from("sf_users").update({ allowed_sections: allowed_sections }).eq("id", userId);
+      // Silently skip if column doesn't exist yet
+      try {
+        await supabase.from("sf_users").update({ allowed_sections: allowed_sections }).eq("id", userId);
+      } catch (e) { /* column may not exist yet */ }
     } else if (daily_limit !== undefined) {
       // Set per-user limit (null = use global default)
       const val = daily_limit === null || daily_limit === "" ? null : parseInt(daily_limit);
