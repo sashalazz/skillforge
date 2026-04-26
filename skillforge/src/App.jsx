@@ -363,8 +363,8 @@ export default function App() {
     await authCall({ action: "admin_update_user", userId, daily_limit: limit }, token);
     loadAdminUsers();
   };
+
   const toggleSection = async (userId, currentSections, sectionId) => {
-    // currentSections: null = all allowed, or array of allowed section ids
     const allIds = CATEGORIES.map(c => c.id);
     let sections = currentSections ? [...currentSections] : [...allIds];
     if (sections.includes(sectionId)) {
@@ -372,7 +372,6 @@ export default function App() {
     } else {
       sections.push(sectionId);
     }
-    // If all are selected, store null (= all allowed)
     const val = sections.length === allIds.length ? null : sections;
     await authCall({ action: "admin_update_user", userId, allowed_sections: val }, token);
     loadAdminUsers();
@@ -919,7 +918,7 @@ export default function App() {
               {CATEGORIES.filter(cat => {
                 if (user?.isAdmin) return true;
                 const allowed = user?.allowedSections;
-                if (!allowed) return true; // null = all allowed
+                if (!allowed) return true;
                 return allowed.includes(cat.id);
               }).map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
