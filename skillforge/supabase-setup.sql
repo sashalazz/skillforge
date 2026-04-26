@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS sf_users (
   approved BOOLEAN DEFAULT FALSE,
   is_admin BOOLEAN DEFAULT FALSE,
   daily_limit INTEGER DEFAULT NULL,
+  allowed_sections JSONB DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -54,6 +55,7 @@ CREATE POLICY "Service role full access config" ON sf_config FOR ALL USING (true
 -- UPDATE sf_users SET approved = true, is_admin = true WHERE email = 'TUA_EMAIL@esempio.com';
 
 -- ═══════════════════════════════════════════════════════
--- MIGRAZIONE: se hai già il database, aggiungi la colonna duration_seconds:
+-- MIGRAZIONE: se hai già il database, aggiungi le colonne mancanti:
 -- ALTER TABLE sf_scores ADD COLUMN IF NOT EXISTS duration_seconds INTEGER DEFAULT NULL;
+-- ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS allowed_sections JSONB DEFAULT NULL;
 -- ═══════════════════════════════════════════════════════
