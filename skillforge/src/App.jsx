@@ -103,7 +103,7 @@ const CATEGORIES = [
     { id: "fb1", title: "Performance Insufficiente", brief: "Team member non raggiunge obiettivi da 2 mesi. Comunica il problema.", role_user: "Manager marketing", role_ai: "Marco", role_ai_full: "Marco, diretto report", ai_p: "In calo da 2 mesi. Difensivo poi aperto se comunicato bene.", tips: ["Modello SBI", "Riconosci punti di forza", "Esempi concreti", "Chiedi il suo punto di vista", "Piano d'azione"], eval: ["Empatia", "Specificità feedback", "Struttura", "Orientamento soluzione", "Ascolto"] },
     { id: "fb2", title: "Feedback a un Senior", brief: "Feedback a collega esperto che ha gestito male una presentazione.", role_user: "PM junior", role_ai: "Laura", role_ai_full: "Laura, Senior Consultant", ai_p: "Esperta e orgogliosa. Scettica su feedback da junior. Ricettiva se rispettoso.", tips: ["Chiedi permesso", "'Io ho notato' non 'tu hai fatto'", "Riconosci esperienza", "Focus impatto", "Proponi supporto"], eval: ["Rispetto seniority", "Diplomazia", "Dati oggettivi", "Posizionamento", "Gestione resistenza"] },
   ]},
-  { id: "difficult", icon: "🔥", label: "Conversazioni Difficili", color: "#D4812F", description: "Conflitti e situazioni delicate", scenarios: [
+  { id: "difficult", icon: "🔥", label: "Affrontare Conversazioni Difficili", color: "#D4812F", description: "Conflitti e situazioni delicate", scenarios: [
     { id: "dc1", title: "Conflitto nel Team", brief: "Due membri in conflitto aperto. Devi mediare.", role_user: "Team Lead", role_ai: "Andrea", role_ai_full: "Andrea, sviluppatore frustrato", ai_p: "Frustrato, collega non rispetta deadline. Emotivo ma professionale.", tips: ["Regole base", "Ascolta senza schierarti", "Riformula", "Interessi comuni", "Soluzioni pratiche"], eval: ["Neutralità", "Gestione emozioni", "Riformulazione", "Mediazione", "Accordo"] },
     { id: "dc2", title: "Comunicare un Licenziamento", brief: "Posizione eliminata per ristrutturazione. Non legato a performance.", role_user: "HR Manager", role_ai: "Fabio", role_ai_full: "Fabio, dipendente 5 anni", ai_p: "Shock, rabbia, preoccupazione. Empatico=accetta. Freddo=ostile.", tips: ["Dritto al punto", "Empatia genuina", "Ristrutturazione non performance", "Next steps", "Spazio emozioni"], eval: ["Chiarezza", "Empatia", "Gestione reazioni", "Info pratiche", "Dignità"] },
   ]},
@@ -113,22 +113,22 @@ const CATEGORIES = [
     { id: "sc3", title: "Cliente Senza Scadenza", brief: "Chiami un cliente in portafoglio le cui polizze non sono in scadenza. Obiettivo: fissare un appuntamento per una revisione delle coperture e individuare eventuali gap o nuove esigenze.", role_user: "Consulente assicurativo", role_ai: "Sig. Ferrara", role_ai_full: "Sig. Ferrara, cliente senza polizze in scadenza", ai_p: "È già tuo cliente e si sente coperto. Non percepisce urgenza di un incontro. Se gli fai capire che la sua situazione potrebbe essere cambiata o che ci sono rischi non coperti, si incuriosisce. Se non dai un motivo concreto, declina gentilmente.", tips: ["Parti da un cambiamento di vita o normativo", "Proponi un check-up gratuito delle coperture", "Evidenzia possibili gap assicurativi", "Non essere allarmista ma informativo", "Fissa un appuntamento breve e mirato"], eval: ["Motivazione alla revisione", "Creazione valore", "Gestione resistenza", "Proposta appuntamento", "Chiusura"] },
     { id: "sc4", title: "Referenza", brief: "Chiami una persona che ti è stata segnalata da un cliente soddisfatto. Obiettivo: presentarti brevemente e fissare un appuntamento conoscitivo.", role_user: "Consulente assicurativo", role_ai: "Dott.ssa Colombo", role_ai_full: "Dott.ssa Colombo, referenza da un tuo cliente", ai_p: "Sa vagamente che un conoscente le ha parlato di te. È aperta ma non ha fretta. Se menzioni chi ti ha segnalato e sei professionale, è disponibile. Se non citi la referenza o sei troppo aggressivo, perde interesse.", tips: ["Cita subito chi ti ha segnalato", "Spiega perché il cliente ti ha raccomandato", "Mostra interesse per la sua situazione specifica", "Proponi un incontro breve e senza impegno", "Lascia la scelta del momento a lei"], eval: ["Uso della referenza", "Creazione fiducia", "Ascolto esigenze", "Proposta appuntamento", "Chiusura"] },
   ]},
-  { id: "leadership", icon: "🎯", label: "Leadership", color: C.teal, description: "Guida e ispira", scenarios: [
+  { id: "leadership", icon: "🎯", label: "Esercitare Leadership", color: C.teal, description: "Guida e ispira", scenarios: [
     { id: "ld1", title: "Delegare Efficacemente", brief: "Delega un tuo collaboratore.", role_user: "Dir. Engineering", role_ai: "Sara", role_ai_full: "Sara, sviluppatrice", ai_p: "Competente ma insicura. Supportata=sicura. Micromanaggiata=frustrata.", tips: ["Perché lei", "Outcome e autonomia", "Checkpoint", "Anticipa paure", "Fiducia genuina"], eval: ["Chiarezza", "Empowerment", "Supporto", "Fiducia", "Success criteria"] },
     { id: "ld2", title: "Annunciare Cambiamento", brief: "Lavoro ibrido obbligatorio. Non piacerà.", role_user: "People Manager", role_ai: "Luca", role_ai_full: "Luca, vocale del team", ai_p: "Resistente, provocatorio. Se spiega e ascolta, costruttivo. Se impone, resiste.", tips: ["Prima perché poi cosa", "Riconosci preoccupazioni", "Negoziabile vs no", "Coinvolgi", "Timeline"], eval: ["Razionale", "Resistenza", "Trasparenza", "Coinvolgimento", "Visione"] },
     { id: "ld3", title: "Influenzare un Comportamento", brief: "Devi influenzare un comportamento per ottenere un cambiamento concreto.", role_user: "Manager", role_ai: "Interlocutore", role_ai_full: "Interlocutore da influenzare", ai_p: "Ha le sue ragioni e abitudini. Non cambia facilmente. Se l'approccio è empatico, concreto e rispettoso, si apre al cambiamento. Se percepisce manipolazione o imposizione, resiste.", tips: ["Descrivi il comportamento osservato, non la persona", "Spiega l'impatto concreto", "Ascolta le ragioni dell'altro", "Proponi alternative insieme", "Ottieni un impegno specifico"], eval: ["Descrizione comportamento", "Impatto comunicato", "Ascolto attivo", "Co-costruzione soluzione", "Impegno ottenuto"] },
   ]},
-  { id: "coaching", icon: "🏋️", label: "Coaching", color: C.accent2, description: "Affianca e sviluppa il tuo team", scenarios: [
+  { id: "coaching", icon: "🏋️", label: "Condurre un Percorso di Coaching", color: C.accent2, description: "Affianca e sviluppa il tuo team", scenarios: [
     { id: "co1", title: "Patto di Coaching", brief: "Stabilisci un patto di coaching con un tuo collaboratore/commerciale.", role_user: "Manager / Coach", role_ai: "Davide", role_ai_full: "Davide, collaboratore commerciale", ai_p: "Attende di capire cosa vuoi da lui. Se coinvolto e ascoltato, si apre e si impegna. Se percepisce imposizione o giudizio, si chiude e diventa passivo.", tips: ["Spiega cos'è il coaching e perché", "Definisci obiettivi condivisi", "Stabilisci regole e frequenza incontri", "Chiedi le sue aspettative", "Crea un clima di fiducia e alleanza"], eval: ["Chiarezza obiettivi", "Coinvolgimento", "Ascolto", "Costruzione fiducia", "Struttura del patto"] },
     { id: "co2", title: "Affiancare in Telefonata", brief: "Affianca un collaboratore/commerciale durante una telefonata con un cliente.", role_user: "Manager / Coach", role_ai: "Giulia", role_ai_full: "Giulia, commerciale in affiancamento", ai_p: "Sa che la stai osservando. Tesa e meno naturale del solito. Se la rassicuri e le dai spazio, migliora. Se intervieni troppo, si blocca e perde sicurezza.", tips: ["Briefing prima della chiamata", "Definisci il tuo ruolo di osservatore", "Lascia fare, intervieni solo se necessario", "Debriefing costruttivo dopo", "Valorizza cosa ha fatto bene"], eval: ["Preparazione", "Rispetto dello spazio", "Tempismo interventi", "Qualità debriefing", "Empowerment"] },
     { id: "co3", title: "Affiancare in Trattativa", brief: "Affianca un collaboratore/commerciale durante una trattativa con un cliente.", role_user: "Manager / Coach", role_ai: "Alessandro", role_ai_full: "Alessandro, commerciale in trattativa", ai_p: "Vuole dimostrare di essere all'altezza. In trattativa tende a concedere troppo per chiudere. Se lo guidi con discrezione, impara. Se lo correggi davanti al cliente, perde credibilità e fiducia.", tips: ["Allineatevi sulla strategia prima", "Definisci ruoli chiari in trattativa", "Segnali discreti per intervenire", "Non sminuire davanti al cliente", "Debriefing con feedback specifico"], eval: ["Preparazione strategica", "Gestione ruoli", "Discrezione", "Qualità debriefing", "Sviluppo competenze"] },
   ]},
-  { id: "ingaggio", icon: "🤝", label: "Ingaggio Cliente", color: "#2E86C1", description: "Ingaggia il cliente e gestisci le resistenze emotive", scenarios: [
+  { id: "ingaggio", icon: "🤝", label: "Ingaggiare il Cliente", color: "#2E86C1", description: "Ingaggia il cliente e gestisci le resistenze emotive", scenarios: [
     { id: "ig1", title: "Ingaggio TCM – Cliente con Polizza Vita", brief: "Il tuo cliente ha già una polizza sulla vita (TCM). Devi scoprire com'è fatta, gestire la relazione, evidenziare eventuali gap nella copertura, rassicurare e proporre una soluzione migliorativa. Segui il processo: gestire relazione → evidenziare gap → area emotiva → rassicurare → condividere soluzione.", role_user: "Consulente assicurativo", role_ai: "Sig. Bianchi", role_ai_full: "Sig. Bianchi, cliente con polizza vita esistente", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Chiedi prima: 'Ha una polizza sulla vita? Com'è fatta?'", "Complimentati se ne ha una, poi indaga le caratteristiche", "Evidenzia i gap: 'Quindi i soldi vanno alla banca?'", "Usa domande a risposta SI: 'Può essere un problema?'", "Rassicura e chiudi: 'Vediamo insieme cosa possiamo fare'"], eval: ["Gestione della relazione iniziale", "Sviluppo consapevolezza emotiva", "Capacità di evidenziare i gap", "Rassicurazione e supporto", "Condivisione della soluzione"] },
     { id: "ig2", title: "Ingaggio TCM – Cliente Senza Polizza Vita", brief: "Il tuo cliente NON ha una polizza sulla vita. Devi sviluppare consapevolezza emotiva facendogli capire il rischio, portarlo nell'area emotiva, rassicurare e proporre una soluzione. Segui il processo: evidenziare i gap → sviluppare consapevolezza → area emotiva → rassicurare → chiudere.", role_user: "Consulente assicurativo", role_ai: "Sig.ra Rossi", role_ai_full: "Sig.ra Rossi, cliente senza polizza vita", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Evidenzia il gap: 'Se venisse a mancare, la famiglia dovrebbe pagare il mutuo'", "Quantifica in euro: 'Pagare senza il suo reddito di X.000€ può essere un problema?'", "Porta nell'area emotiva con domande a risposta SI", "Rassicura: 'Mi spiace parlarle di un tema così spaventoso, ma con poco se la cava'", "Chiudi con curiosità: lascia che chieda 'Poco quanto?'"], eval: ["Sviluppo consapevolezza emotiva", "Quantificazione economica del rischio", "Gestione dell'area emotiva", "Rassicurazione efficace", "Chiusura verso la soluzione"] },
     { id: "ig3", title: "Ingaggio Infortuni e Coperture", brief: "Il tuo cliente ha già una polizza vita ma non ha copertura infortuni/invalidità. Devi indagare altri rischi non coperti, sviluppare consapevolezza emotiva sul gap e proporre una copertura complementare. Segui il processo: complimenti → indagare altri rischi → area emotiva → rassicurare → soluzione.", role_user: "Consulente assicurativo", role_ai: "Sig. Verdi", role_ai_full: "Sig. Verdi, cliente con polizza vita ma senza copertura infortuni", ai_p: "Personalità determinata dalla resistenza emotiva selezionata.", tips: ["Complimentati per la polizza vita esistente", "Indaga: 'E se invece di morire si fa così male da non poter più lavorare?'", "Chiedi: 'Ce l'ha una copertura infortuni/invalidità?'", "Sviluppa consapevolezza sul gap specifico", "Rassicura e proponi la soluzione complementare"], eval: ["Valorizzazione copertura esistente", "Esplorazione rischi non coperti", "Sviluppo consapevolezza emotiva", "Gestione della resistenza", "Proposta soluzione complementare"] },
   ]},
-  { id: "emotional", icon: "🧠", label: "Intelligenza Emotiva", color: "#E17055", description: "Gestisci emozioni", scenarios: [
+  { id: "emotional", icon: "🧠", label: "Governare gli Aspetti Emotivi", color: "#E17055", description: "Gestisci emozioni", scenarios: [
     { id: "ei1", title: "Collega in Burnout", brief: "Collega in burnout. Affronta con sensibilità.", role_user: "Team Lead", role_ai: "Chiara", role_ai_full: "Chiara, in burnout", ai_p: "Esausta, nasconde. Minimizza. Empatia=si apre. Diretto=si chiude.", tips: ["Momento privato", "Senza giudizio", "Ascolta 80%", "Supporto non soluzioni", "Rispetta confini"], eval: ["Empatia", "Ascolto", "Confini", "Supporto", "Non giudizio"] },
     { id: "ei2", title: "Collaboratore Arrabbiato", brief: "Il tuo collaboratore è furioso perché il suo progetto è stato assegnato a un altro collega senza preavviso. Entra nel tuo ufficio visibilmente alterato, con il viso rosso e la voce alzata. Devi gestire la sua rabbia senza alimentarla.", role_user: "Manager", role_ai: "Stefano", role_ai_full: "Stefano, collaboratore furioso", ai_p: "Sei Stefano, furioso. Il tuo progetto a cui lavoravi da 3 mesi è stato dato ad un altro senza nemmeno avvisarti. Ti senti tradito e non rispettato. Entri nell'ufficio del capo sbattendo la porta. Parli a voce alta, interrompi, usi frasi come 'È inaccettabile!', 'Non me lo merito!', 'Sempre le stesse cose qui!'. Se il manager ti lascia sfogare senza reagire, poi inizia ad abbassare i toni e spieghi cosa ti ha ferito davvero. Se ti dice di calmarti o minimizza, esplodi ancora di più. Se riconosce il tuo diritto di essere arrabbiato, ti apri. Max 2-3 frasi, mostra la rabbia con *indicazioni sceniche*.", tips: ["Lascia sfogare senza interrompere", "Non dire 'calmati'", "Riconosci l'emozione: 'Capisco che sei arrabbiato'", "Separa l'emozione dal problema", "Affronta i fatti solo quando la temperatura scende"], eval: ["Gestione dello sfogo", "Riconoscimento emozione", "Contenimento senza repressione", "Tempi di intervento", "Orientamento alla soluzione"] },
     { id: "ei3", title: "Collaboratore Sprezzante", brief: "Il tuo collaboratore mostra un atteggiamento sprezzante e cinico durante una riunione di team. Commenta sarcasticamente le proposte degli altri, alza gli occhi al cielo e sminuisce ogni iniziativa. Devi intervenire senza umiliarlo davanti al gruppo.", role_user: "Responsabile di team", role_ai: "Riccardo", role_ai_full: "Riccardo, collaboratore sprezzante", ai_p: "Sei Riccardo, cinico e sprezzante. Pensi che la maggior parte dei colleghi sia mediocre e che le riunioni siano una perdita di tempo. Rispondi con sarcasmo: 'Ah, geniale, non ci aveva mai pensato nessuno', 'Sì sì, come l'ultima volta che è andata benissimo...'. Se il capo ti riprende davanti a tutti, diventi ancora più velenoso e freddo. Se ti prende da parte con rispetto e ti chiede cosa c'è dietro il tuo atteggiamento, riveli che ti senti sottovalutato: fai proposte da mesi che nessuno considera. Se senti che qualcuno ti ascolta davvero, il sarcasmo cala. Max 2-3 frasi, usa *indicazioni sceniche* per gesti sprezzanti.", tips: ["Non riprendere davanti al gruppo", "Prendi da parte dopo la riunione", "Chiedi cosa c'è dietro l'atteggiamento", "Non rispondere al sarcasmo con sarcasmo", "Valorizza il suo punto di vista nascosto"], eval: ["Gestione del sarcasmo", "Protezione della dignità", "Esplorazione delle cause", "Controllo emotivo personale", "Recupero della relazione"] },
@@ -292,7 +292,6 @@ export default function App() {
   const [adminUserStats, setAdminUserStats] = useState({});
   const [expandedUser, setExpandedUser] = useState(null);
   const [sessionStartTime, setSessionStartTime] = useState(null);
-  const [enabledSections, setEnabledSections] = useState(null); // null = all enabled
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
@@ -309,7 +308,7 @@ export default function App() {
     const saved = localStorage.getItem("sf_token");
     if (saved) {
       authCall({ action: "verify" }, saved).then(res => {
-        if (res.success) { setUser(res.user); setToken(saved); setScreen("home"); setEnabledSections(res.user.enabledSections || null); }
+        if (res.success) { setUser(res.user); setToken(saved); setScreen("home"); }
         else { localStorage.removeItem("sf_token"); setScreen("auth"); }
         setAnimateIn(true);
       }).catch(() => { setScreen("auth"); setAnimateIn(true); });
@@ -326,7 +325,6 @@ export default function App() {
     if (res.success) {
       localStorage.setItem("sf_token", res.token);
       setToken(res.token); setUser(res.user); setFormEmail(""); setFormPass("");
-      setEnabledSections(res.user.enabledSections || null);
       nav("home");
     } else setAuthError(res.error || "Errore login");
   };
@@ -362,11 +360,6 @@ export default function App() {
 
   const setUserLimit = async (userId, limit) => {
     await authCall({ action: "admin_update_user", userId, daily_limit: limit }, token);
-    loadAdminUsers();
-  };
-
-  const setUserSections = async (userId, sections) => {
-    await authCall({ action: "admin_update_user", userId, enabled_sections: sections }, token);
     loadAdminUsers();
   };
 
@@ -814,51 +807,6 @@ export default function App() {
                       </select>
                     </div>
                   )}
-
-                  {/* ── SEZIONI ABILITATE PER UTENTE ── */}
-                  {!u.is_admin && (() => {
-                    let userSections = null;
-                    try {
-                      userSections = u.enabled_sections ? (typeof u.enabled_sections === "string" ? JSON.parse(u.enabled_sections) : u.enabled_sections) : null;
-                    } catch { userSections = null; }
-                    // null = non ancora configurato → tutte abilitate di default
-                    const effectiveSections = userSections || CATEGORIES.map(c => c.id);
-                    return (
-                    <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: "12px", color: C.muted, marginBottom: "8px" }}>Sezioni abilitate:</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {CATEGORIES.map(cat => {
-                          const isEnabled = effectiveSections.includes(cat.id);
-                          return (
-                            <div key={cat.id}
-                              onClick={() => {
-                                let next;
-                                if (isEnabled) {
-                                  next = effectiveSections.filter(id => id !== cat.id);
-                                  if (next.length === 0) return; // almeno 1
-                                } else {
-                                  next = [...effectiveSections, cat.id];
-                                }
-                                // Salva sempre l'array esplicito
-                                setUserSections(u.id, next);
-                              }}
-                              style={{
-                                display: "flex", alignItems: "center", gap: "6px",
-                                background: isEnabled ? `${cat.color}25` : "#e8e8e8",
-                                border: `2px solid ${isEnabled ? cat.color : "#ccc"}`,
-                                borderRadius: "8px", padding: "6px 12px", cursor: "pointer",
-                                transition: "all 0.2s",
-                                fontSize: "12px"
-                              }}>
-                              <span style={{ filter: isEnabled ? "none" : "grayscale(1)", opacity: isEnabled ? 1 : 0.4 }}>{cat.icon}</span>
-                              <span style={{ fontWeight: 600, color: isEnabled ? cat.color : "#999" }}>{cat.label}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    );
-                  })()}
                 </div>
               ); })}
             </div>
@@ -888,7 +836,7 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {CATEGORIES.filter(cat => !enabledSections || enabledSections.includes(cat.id)).map(cat => (
+              {CATEGORIES.map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
