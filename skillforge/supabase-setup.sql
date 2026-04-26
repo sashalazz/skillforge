@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS sf_users (
   daily_limit INTEGER DEFAULT NULL,
   allowed_sections JSONB DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
-  ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS allowed_sections JSONB DEFAULT NULL;
 );
 
 -- 2. Tabella punteggi (per leaderboard)
@@ -41,6 +40,7 @@ INSERT INTO sf_config (key, value) VALUES ('daily_limit', '5') ON CONFLICT (key)
 ALTER TABLE sf_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sf_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sf_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sf_users ADD COLUMN IF NOT EXISTS allowed_sections JSONB DEFAULT NULL;
 
 -- 5. Policy: consenti tutto via service_role key (usata dal backend)
 CREATE POLICY "Service role full access users" ON sf_users FOR ALL USING (true) WITH CHECK (true);
