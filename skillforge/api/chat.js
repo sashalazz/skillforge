@@ -10,11 +10,12 @@ export default async function handler(req, res) {
     const { messages, system, max_tokens } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0)
       return res.status(400).json({ error: "Invalid messages payload" });
-    const trimmedMessages = messages.slice(-6);
+    const trimmedMessages = messages.length > 8 ? messages.slice(-8) : messages;
+    const effectiveMaxTokens = Math.min(max_tokens || 200, 4096);
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: max_tokens || 200, system: system || "", messages: trimmedMessages }),
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: effectiveMaxTokens, system: system || "", messages: trimmedMessages }),
     });
     const data = await r.json();
     if (!r.ok) return res.status(r.status).json({ error: data?.error?.message || "Anthropic request failed" });
