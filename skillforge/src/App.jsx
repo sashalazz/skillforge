@@ -100,8 +100,8 @@ function diffMod(d) {
 // ─── SCENARIOS ──────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: "feedback", icon: "💬", label: "Dare Feedback", color: C.accent, description: "Feedback costruttivo ed efficace", scenarios: [
-    { id: "fb1", title: "Performance Insufficiente", brief: "Team member non raggiunge obiettivi da 2 mesi. Comunica il problema.", role_user: "Manager marketing", role_ai: "Marco", role_ai_full: "Marco, diretto report", ai_p: "In calo da 2 mesi. Difensivo poi aperto se comunicato bene.", tips: ["Modello SBI", "Riconosci punti di forza", "Esempi concreti", "Chiedi il suo punto di vista", "Piano d'azione"], eval: ["Empatia", "Specificità feedback", "Struttura", "Orientamento soluzione", "Ascolto"] },
-    { id: "fb2", title: "Feedback a un Senior", brief: "Feedback a collega esperto che ha gestito male una presentazione.", role_user: "PM junior", role_ai: "Laura", role_ai_full: "Laura, Senior Consultant", ai_p: "Esperta e orgogliosa. Scettica su feedback da junior. Ricettiva se rispettoso.", tips: ["Chiedi permesso", "'Io ho notato' non 'tu hai fatto'", "Riconosci esperienza", "Focus impatto", "Proponi supporto"], eval: ["Rispetto seniority", "Diplomazia", "Dati oggettivi", "Posizionamento", "Gestione resistenza"] },
+    { id: "fb1", title: "Performance Insufficiente", brief: "Team member non raggiunge obiettivi da 2 mesi. Comunica il problema.", role_user: "Manager marketing", role_ai: "Marco", role_ai_full: "Marco, diretto report", ai_p: "In calo da 2 mesi. Difensivo poi aperto se comunicato bene.", tips: ["Descrivi il risultato raggiunto in modo chiaro e circoscritto", "Mostra le conseguenze negative e il livello di gravità", "Ascolta senza interrompere le osservazioni del collaboratore", "Riconosci l'intenzione positiva", "Stigmatizza il comportamento, non la persona", "Chiedi: «Cosa puoi fare di diverso la prossima volta?»", "Descrivi un'alternativa efficace (se necessario)", "Ottieni il consenso e concorda un impegno", "Concorda un momento di verifica"], eval: ["Empatia", "Specificità feedback", "Struttura", "Orientamento soluzione", "Ascolto"] },
+    { id: "fb2", title: "Feedback a un Senior", brief: "Feedback a collega esperto che ha gestito male una presentazione.", role_user: "PM junior", role_ai: "Laura", role_ai_full: "Laura, Senior Consultant", ai_p: "Esperta e orgogliosa. Scettica su feedback da junior. Ricettiva se rispettoso.", tips: ["Preparati con dati e fatti, pochi e focalizzati", "Scegli luogo e momento privato", "Focalizza l'intervento su un solo obiettivo specifico", "Indica i comportamenti alternativi concreti da tenere", "Mostra fiducia sulle possibilità di miglioramento", "Renditi disponibile per un supporto"], eval: ["Rispetto seniority", "Diplomazia", "Dati oggettivi", "Posizionamento", "Gestione resistenza"] },
   ]},
   { id: "difficult", icon: "🔥", label: "Affrontare Conversazioni Difficili", color: "#D4812F", description: "Conflitti e situazioni delicate", scenarios: [
     { id: "dc1", title: "Conflitto nel Team", brief: "Due membri in conflitto aperto. Devi mediare.", role_user: "Team Lead", role_ai: "Andrea", role_ai_full: "Andrea, sviluppatore frustrato", ai_p: "Frustrato, collega non rispetta deadline. Emotivo ma professionale.", tips: ["Regole base", "Ascolta senza schierarti", "Riformula", "Interessi comuni", "Soluzioni pratiche"], eval: ["Neutralità", "Gestione emozioni", "Riformulazione", "Mediazione", "Accordo"] },
@@ -114,7 +114,7 @@ const CATEGORIES = [
     { id: "sc4", title: "Referenza", brief: "Chiami una persona che ti è stata segnalata da un cliente soddisfatto. Obiettivo: presentarti brevemente e fissare un appuntamento conoscitivo.", role_user: "Consulente assicurativo", role_ai: "Dott.ssa Colombo", role_ai_full: "Dott.ssa Colombo, referenza da un tuo cliente", ai_p: "Sa vagamente che un conoscente le ha parlato di te. È aperta ma non ha fretta. Se menzioni chi ti ha segnalato e sei professionale, è disponibile. Se non citi la referenza o sei troppo aggressivo, perde interesse.", tips: ["Cita subito chi ti ha segnalato", "Spiega perché il cliente ti ha raccomandato", "Mostra interesse per la sua situazione specifica", "Proponi un incontro breve e senza impegno", "Lascia la scelta del momento a lei"], eval: ["Uso della referenza", "Creazione fiducia", "Ascolto esigenze", "Proposta appuntamento", "Chiusura"] },
   ]},
   { id: "leadership", icon: "🎯", label: "Esercitare Leadership", color: C.teal, description: "Guida e ispira", scenarios: [
-    { id: "ld1", title: "Delegare Efficacemente", brief: "Delega un tuo collaboratore.", role_user: "Dir. Engineering", role_ai: "Sara", role_ai_full: "Sara, sviluppatrice", ai_p: "Competente ma insicura. Supportata=sicura. Micromanaggiata=frustrata.", tips: ["Perché lei", "Outcome e autonomia", "Checkpoint", "Anticipa paure", "Fiducia genuina"], eval: ["Chiarezza", "Empowerment", "Supporto", "Fiducia", "Success criteria"] },
+    { id: "ld1", title: "Delegare Efficacemente", brief: "Delega un tuo collaboratore.", role_user: "Dir. Engineering", role_ai: "Sara", role_ai_full: "Sara, sviluppatrice", ai_p: "Competente ma insicura. Supportata=sicura. Micromanaggiata=frustrata.", tips: ["Indica la prestazione sotto forma di obiettivi attesi", "Spiega al collaboratore il perché della delega", "Evidenzia i criteri con cui si valuterà", "Sottolinea le conseguenze negative e positive nel fare bene l'attività delegata", "Dai una scadenza", "Chiedi: «Come pensi di fare?»", "Dai suggerimenti alternativi (se necessario)", "Verifica il risultato parziale o finale", "Dai un feedback positivo o di ristrutturazione"], eval: ["Chiarezza", "Empowerment", "Supporto", "Fiducia", "Success criteria"] },
     { id: "ld2", title: "Annunciare Cambiamento", brief: "Lavoro ibrido obbligatorio. Non piacerà.", role_user: "People Manager", role_ai: "Luca", role_ai_full: "Luca, vocale del team", ai_p: "Resistente, provocatorio. Se spiega e ascolta, costruttivo. Se impone, resiste.", tips: ["Prima perché poi cosa", "Riconosci preoccupazioni", "Negoziabile vs no", "Coinvolgi", "Timeline"], eval: ["Razionale", "Resistenza", "Trasparenza", "Coinvolgimento", "Visione"] },
     { id: "ld3", title: "Influenzare un Comportamento", brief: "Devi influenzare un comportamento per ottenere un cambiamento concreto.", role_user: "Manager", role_ai: "Interlocutore", role_ai_full: "Interlocutore da influenzare", ai_p: "Ha le sue ragioni e abitudini. Non cambia facilmente. Se l'approccio è empatico, concreto e rispettoso, si apre al cambiamento. Se percepisce manipolazione o imposizione, resiste.", tips: ["Descrivi il comportamento osservato, non la persona", "Spiega l'impatto concreto", "Ascolta le ragioni dell'altro", "Proponi alternative insieme", "Ottieni un impegno specifico"], eval: ["Descrizione comportamento", "Impatto comunicato", "Ascolto attivo", "Co-costruzione soluzione", "Impegno ottenuto"] },
   ]},
@@ -361,19 +361,6 @@ export default function App() {
 
   const setUserLimit = async (userId, limit) => {
     await authCall({ action: "admin_update_user", userId, daily_limit: limit }, token);
-    loadAdminUsers();
-  };
-
-  const toggleSection = async (userId, currentSections, sectionId) => {
-    const allIds = CATEGORIES.map(c => c.id);
-    let sections = currentSections ? [...currentSections] : [...allIds];
-    if (sections.includes(sectionId)) {
-      sections = sections.filter(s => s !== sectionId);
-    } else {
-      sections.push(sectionId);
-    }
-    const val = sections.length === allIds.length ? null : sections;
-    await authCall({ action: "admin_update_user", userId, allowed_sections: val }, token);
     loadAdminUsers();
   };
 
@@ -841,38 +828,6 @@ export default function App() {
                   )}
 
                   {!u.is_admin && (
-                    <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
-                      <div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "8px" }}>📚 Sezioni abilitate</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                        {CATEGORIES.map(cat => {
-                          const allIds = CATEGORIES.map(c => c.id);
-                          const userSections = u.allowed_sections || allIds;
-                          const isEnabled = userSections.includes(cat.id);
-                          return (
-                            <div key={cat.id}
-                              onClick={() => toggleSection(u.id, u.allowed_sections, cat.id)}
-                              style={{
-                                display: "flex", alignItems: "center", gap: "5px",
-                                padding: "6px 12px", borderRadius: "10px", cursor: "pointer",
-                                fontSize: "12px", fontWeight: 600,
-                                transition: "all 0.2s",
-                                background: isEnabled ? `${cat.color}18` : "rgba(42,26,14,0.04)",
-                                border: `1.5px solid ${isEnabled ? cat.color : "rgba(42,26,14,0.12)"}`,
-                                color: isEnabled ? cat.color : "rgba(42,26,14,0.25)",
-                                opacity: isEnabled ? 1 : 0.6,
-                                filter: isEnabled ? "none" : "grayscale(100%)",
-                              }}>
-                              <span style={{ fontSize: "14px" }}>{cat.icon}</span>
-                              <span>{cat.label}</span>
-                              {isEnabled && <span style={{ fontSize: "10px", marginLeft: "2px" }}>✓</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {!u.is_admin && (
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "12px", color: C.muted, flex: 1 }}>Sessioni/giorno:</div>
                       <select
@@ -915,12 +870,7 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {CATEGORIES.filter(cat => {
-                if (user?.isAdmin) return true;
-                const allowed = user?.allowedSections;
-                if (!allowed) return true;
-                return allowed.includes(cat.id);
-              }).map(cat => (
+              {CATEGORIES.map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
