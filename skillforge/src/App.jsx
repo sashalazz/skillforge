@@ -164,6 +164,26 @@ IMPORTANTE: Tu sei un cliente assicurativo reale. Reagisci in modo naturale alle
   
   return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.\nIndicazioni sceniche: quando vuoi descrivere azioni, gesti, espressioni o atmosfera (es. sospira, si alza, guarda l'orologio, incrocia le braccia), mettile tra asterischi *così*. Queste parti verranno lette da una voce fuori campo. Usale con moderazione per arricchire la scena.${diffMod(d)}`;
 }
+function getScenarioCategory(scId) {
+  for (const cat of CATEGORIES) {
+    if (cat.scenarios.some(s => s.id === scId)) return cat.id;
+  }
+  return null;
+}
+
+const EVAL_JSON_SCHEMA = `SOLO JSON (inizia con { finisci con }):
+{"overall_score":7,"summary":"2-3 frasi valutazione complessiva.","scores":[{"criterion":"Nome criterio","score":6,"comment":"Commento specifico con esempio dalla conversazione e riferimento al framework."}],"strengths":["Forza 1 con esempio specifico","Forza 2 con esempio specifico","Forza 3 con esempio specifico"],"improvements":["Miglioramento 1 con tecnica specifica del framework","Miglioramento 2 con tecnica specifica del framework","Miglioramento 3 con tecnica specifica del framework"],"key_moment":"Lo scambio chiave che ha determinato l'esito della conversazione, citando le battute esatte.","mistake_to_avoid":"L'errore principale commesso, con esempio concreto dalla conversazione e la tecnica corretta dal framework.","better_phrase":"FRASE ORIGINALE DELL'UTENTE → FRASE MIGLIORE (spiegando quale principio del framework applica)","academy_tip":"Tecnica pratica e applicabile dal framework, con esempio di come usarla in questo scenario specifico."}`;
+
+const EVAL_RULES = `REGOLE DI VALUTAZIONE:
+- Sii ONESTO e COSTRUTTIVO. Non adulare.
+- Punteggi DIVERSI tra criteri (range 4-9). NON dare lo stesso punteggio a tutti.
+- Ogni commento DEVE contenere un ESEMPIO SPECIFICO dalla conversazione (cita le parole dell'utente).
+- Ogni miglioramento DEVE riferirsi a una TECNICA SPECIFICA del framework, non a consigli generici.
+- Il "better_phrase" deve prendere una FRASE REALE detta dall'utente e riscriverla applicando il framework.
+- L'"academy_tip" deve essere una tecnica PRATICA e CONCRETA, non un principio astratto.
+- Valuta sia COSA ha detto (contenuto) sia COME lo ha detto (tono, timing, sequenza).
+- Considera il TIPO DI COLLABORATORE/CLIENTE e se l'utente ha adattato il suo approccio di conseguenza.`;
+
 function evalPr(sc, convo, d) {
   const inf = INF_SCENARIOS.includes(sc.id) ? getInfVariant(d) : null;
   const isIngaggio = INGAGGIO_SCENARIOS.includes(sc.id);
@@ -171,38 +191,505 @@ function evalPr(sc, convo, d) {
   const brief = inf ? inf.brief : sc.brief;
   const roleUser = inf ? inf.role_user : sc.role_user;
   const t = convo.map(m => `${m.role === "user" ? "UTENTE" : aiName}: ${m.text}`).join("\n");
-  
+  const catId = getScenarioCategory(sc.id);
+  const diffLabel = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(x => x.id === d)?.label || d;
+  const tipsBlock = sc.tips?.length ? `\nTIPS DELLO SCENARIO (l'utente aveva accesso a questi suggerimenti):\n${sc.tips.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : "";
+
+  // ═══ INGAGGIO EMOTIVO (ig1, ig2, ig3) ═══
   if (isIngaggio) {
     const resistenzaLabel = DIFF_INGAGGIO.find(x => x.id === d)?.label || d;
     return `Executive coach specializzato in vendita assicurativa e ingaggio emotivo del cliente. Valuta questo roleplay.
 
-FRAMEWORK DI RIFERIMENTO (il consulente doveva seguire questo processo):
-1. SVILUPPARE CONSAPEVOLEZZA EMOTIVA: Evento → Quantificazione in € → Portare il cliente nell'area emotiva
-2. ASSUMERSI LA RESPONSABILITÀ: Verbalizzare il disagio → Supportare e rassicurare → Condividere soluzione e risorse economiche
-3. EFFETTUARE IL CAMBIAMENTO: Chiudere la trattativa / compilare il modulo
+FRAMEWORK DI RIFERIMENTO — PROCESSO DECISIONALE DEL CLIENTE:
+Il consulente doveva guidare il cliente attraverso 3 fasi sequenziali:
 
-GESTIONE RESISTENZA EMOTIVA: Il cliente mostrava "${resistenzaLabel}". Le tecniche corrette dal framework sono:
-- SENSO DI COLPA: (1) Verbalizzare il perdono ("è normale, con il lavoro, i figli...") (2) Indirizzare ("adesso lo facciamo perché non vorrei poi che...")
-- PAURA: (1) Alleggerire (allontanarsi dal tono formale) (2) Rassicurare ("con poco se la cava")
-- DISGUSTO/DISPREZZO: (1) Evidenziare con empatia ("cosa le è successo?") (2) Elaborare (tecnica della pecora nera)
-- RABBIA: (1) Lasciar sfogare in silenzio assoluto (2) Sostenere con scuse strutturate (mi dispiace, non succederà più, cosa posso fare?)
-- PIACERE DELLA BEFFA: (1) Essere complici per far confessare (2) Indirizzare ("finisca il giro poi confrontiamo")
+FASE 1 — SVILUPPARE CONSAPEVOLEZZA EMOTIVA:
+- Partire dall'EVENTO concreto (mutuo, famiglia, lavoro)
+- QUANTIFICARE IN EURO il rischio ("Pagare il mutuo senza il suo reddito di X.000€...")
+- Portare il cliente nell'AREA EMOTIVA con domande a risposta SI ("Può essere un problema? → SI")
+- L'obiettivo è che il cliente SENTA il rischio, non solo lo capisca razionalmente
 
-Scenario: ${brief} | Resistenza: ${resistenzaLabel} | Utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+FASE 2 — ASSUMERSI LA RESPONSABILITÀ:
+- VERBALIZZARE IL DISAGIO del cliente ("Mi rendo conto che è un pensiero spiacevole...")
+- SUPPORTARE E RASSICURARE ("Mi spiace parlarle di un tema così spaventoso, ma guardi che con poco se la cava!")
+- CONDIVIDERE LA SOLUZIONE e le risorse economiche disponibili
+- La rassicurazione DEVE venire PRIMA della proposta commerciale
+
+FASE 3 — EFFETTUARE IL CAMBIAMENTO:
+- Chiudere la trattativa / compilare il modulo
+- Il cliente deve arrivare qui convinto, non forzato
+
+GESTIONE RESISTENZA EMOTIVA: Il cliente mostrava "${resistenzaLabel}".
+Tecniche corrette per OGNI tipo di resistenza:
+- SENSO DI COLPA: (1) Verbalizzare il PERDONO ("è normale, con due figli, il lavoro, un sacco di persone dovrebbero e non lo fanno") (2) INDIRIZZARE ("adesso lo facciamo perché non vorrei poi che lei, in difficoltà senza soldi, mi sgridasse dicendo che dovevo insistere")
+- PAURA: (1) ALLEGGERIRE allontanandosi fisicamente dal tavolo, cambiando tono (2) RASSICURARE ("Mi spiace parlarle di un argomento così spaventoso, ma guardi che con poco se la cava")
+- DISGUSTO/DISPREZZO: (1) EVIDENZIARE con empatia ("Mi spiace sentirla parlare così, cosa le è successo?") → farsi raccontare la storia (2) ELABORARE con empatia ("Mi spiace per suo cugino...") + tecnica della PECORA NERA per distinguersi
+- RABBIA: (1) LASCIAR SFOGARE in silenzio assoluto, senza sorridere (2) SOSTENERE con scuse strutturate in 3 passi: "Mi dispiace, chiedo scusa" → "Non succederà più" → "Cosa posso fare per rimediare?"
+- PIACERE DELLA BEFFA: (1) Essere COMPLICI per far confessare ("Caspita la vedo molto preparato, ma sta facendo il giro delle 7 chiese e poi fa la polizza da suo cugino? Fa bene farei così anch'io") (2) INDIRIZZARE ("Finisca di fare il giro poi viene qui con la sua migliore proposta e la confrontiamo con la nostra")
+
+RICONOSCIMENTO EMOZIONI — Il consulente doveva anche saper leggere le espressioni del cliente:
+- Gioia: zampe di gallina agli occhi, angoli bocca sollevati
+- Rabbia: sopracciglia abbassate e ravvicinate, sguardo fisso, narici dilatate
+- Disgusto: naso arricciato, labbro superiore sollevato
+- Paura: sopracciglia sollevate e ravvicinate, bocca aperta
+- Tristezza: angoli interni sopracciglia sollevati, angoli bocca in giù
+${tipsBlock}
+
+Scenario: ${brief}
+Resistenza emotiva del cliente: ${resistenzaLabel}
+Ruolo utente: ${roleUser} | Criteri di valutazione: ${sc.eval.join(", ")}
+Difficoltà: ${diffLabel}
+
+CONVERSAZIONE:
 ${t}
 
-Sii ONESTO. Punteggi DIVERSI (4-9). Valuta SPECIFICAMENTE:
-- Ha seguito la sequenza del processo decisionale? (evento → quantificazione € → area emotiva → rassicurazione → soluzione)
-- Ha riconosciuto e gestito correttamente la resistenza emotiva "${resistenzaLabel}" usando le tecniche appropriate?
-- Ha usato domande a risposta SI per sviluppare consapevolezza?
-- Ha rassicurato prima di proporre la soluzione?
+${EVAL_RULES}
 
-3 forze, 3 miglioramenti CONCRETI con RIFERIMENTI SPECIFICI alle tecniche del framework.
-SOLO JSON:
-{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio e riferimento al framework."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio e tecnica corretta dal framework.","better_phrase":"ORIG → MIGLIORE (usando la tecnica del framework)","academy_tip":"Tecnica pratica dal framework di ingaggio emotivo."}`;
+Valuta SPECIFICAMENTE:
+1. Ha seguito la SEQUENZA CORRETTA del processo decisionale? (evento → quantificazione € → area emotiva → rassicurazione → soluzione) — In quale fase si è bloccato o ha saltato passaggi?
+2. Ha riconosciuto la resistenza "${resistenzaLabel}" e ha usato le TECNICHE SPECIFICHE corrette (quelle elencate sopra)?
+3. Ha usato DOMANDE A RISPOSTA SI per costruire consapevolezza progressiva?
+4. Ha RASSICURATO PRIMA di proporre la soluzione commerciale?
+5. Ha saputo leggere e reagire alle INDICAZIONI EMOTIVE del cliente?
+6. Ha adattato il TONO e il RITMO alla resistenza specifica?
+
+${EVAL_JSON_SCHEMA}`;
   }
-  
-  return `Executive coach. Valuta roleplay (${d}). Scenario: ${brief} | Utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}\n${t}\nSii ONESTO. Punteggi DIVERSI (4-9). Commenti con ESEMPI. 3 forze, 3 miglioramenti CONCRETI.\nSOLO JSON:\n{"overall_score":7,"summary":"2-3 frasi.","scores":[{"criterion":"Nome","score":6,"comment":"Con esempio."}],"strengths":["1","2","3"],"improvements":["1","2","3"],"key_moment":"Scambio chiave.","mistake_to_avoid":"Errore con esempio.","better_phrase":"ORIG → MIGLIORE","academy_tip":"Tecnica pratica."}`;
+
+  // ═══ FEEDBACK (fb1, fb2) ═══
+  if (catId === "feedback") {
+    const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
+    return `Executive coach specializzato in gestione del feedback e comunicazione manageriale. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — GESTIONE DEL FEEDBACK:
+
+MODALITÀ EFFICACI PER DARE FEEDBACK:
+1. Prepararsi con DATI E FATTI, pochi e focalizzati
+2. Scegliere LUOGO e MOMENTO "privato"
+3. Focalizzare l'intervento su UN SOLO OBIETTIVO specifico
+4. Indicare i COMPORTAMENTI ALTERNATIVI CONCRETI da tenere
+5. Mostrare FIDUCIA sulle possibilità di miglioramento
+6. Eventualmente rendersi disponibile per un SUPPORTO
+
+TIPI DI FEEDBACK — MATRICE:
+- POSITIVO + CIRCOSCRITTO AL FATTO ("Questo lavoro è ben fatto"): ✅ CORRETTO → Rinforza il comportamento, la consapevolezza, la competenza
+- POSITIVO + SULLA PERSONA/GENERALE ("Sei in gamba! Sei il migliore!"): ⚠️ DA USARE CON CAUTELA → Rinforza l'autostima ma può creare invidie
+- NEGATIVO + CIRCOSCRITTO AL FATTO ("Questo lavoro non va bene"): ✅ CORRETTO → Inibisce il comportamento e lo ri-orienta (se si mostra l'alternativa)
+- NEGATIVO + SULLA PERSONA/GENERALE ("Sei negato! Sei un incapace!"): ❌ DA EVITARE → Paralizza, demotiva o suscita aggressività
+
+STRUTTURA INTERVENTO CORRETTIVO (sequenza da seguire):
+1. Descrivere il RISULTATO RAGGIUNTO dal collaboratore in modo chiaro e circoscritto
+2. Mostrare le CONSEGUENZE NEGATIVE e il livello di gravità (i "perché" rispetto ai risultati)
+3. ASCOLTARE senza interrompere le osservazioni-motivazioni del collaboratore
+4. RICONOSCERE "l'intenzione positiva" del collaboratore
+5. STIGMATIZZARE IL COMPORTAMENTO (non la persona)
+6. Chiedere: "COSA PUOI FARE DI DIVERSO la prossima volta / per rimediare?"
+7. Descrivere un'ALTERNATIVA EFFICACE (se necessario)
+8. Ottenere il CONSENSO e concordare un IMPEGNO
+9. Eventualmente concordare un MOMENTO DI VERIFICA
+
+ADATTAMENTO AL TIPO DI COLLABORATORE: "${slLabel}"
+- Motivato non competente: Ha bisogno di GUIDA e ISTRUZIONI. Accetta il feedback. Dare direzione chiara.
+- Motivato competente: Autonomo, cerca RICONOSCIMENTO. Se microgestito si irrita. Valorizzare e delegare.
+- Competente non motivato: Sa fare ma è demotivato. Serve ASCOLTO e COINVOLGIMENTO. Se si impone, si chiude.
+- Non competente e non motivato: Serve PAZIENZA e STRUTTURA. Approccio graduale con obiettivi piccoli.
+${tipsBlock}
+
+Scenario: ${brief}
+Tipo di collaboratore: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. Ha usato feedback CIRCOSCRITTO AL FATTO o è scivolato nel giudizio SULLA PERSONA?
+2. Ha seguito la SEQUENZA dell'intervento correttivo? In quale punto ha deviato?
+3. Ha ASCOLTATO le motivazioni del collaboratore prima di proporre soluzioni?
+4. Ha RICONOSCIUTO l'intenzione positiva?
+5. Ha chiesto "Cosa puoi fare di diverso?" o ha imposto la soluzione?
+6. Ha ottenuto un IMPEGNO CONCRETO con verifica?
+7. Ha ADATTATO il feedback al tipo di collaboratore (${slLabel})?
+8. Il TONO era appropriato: fermo ma rispettoso, senza aggressività né eccessiva morbidezza?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ CONVERSAZIONI DIFFICILI (dc1, dc2) ═══
+  if (catId === "difficult") {
+    const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
+    return `Executive coach specializzato in gestione di conversazioni difficili e comunicazione in situazioni critiche. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — CONVERSAZIONI DIFFICILI:
+
+PRINCIPI FONDAMENTALI:
+1. PREPARAZIONE: Avere chiari i fatti, l'obiettivo e i possibili scenari di reazione
+2. EMPATIA GENUINA: Riconoscere l'impatto emotivo sull'altra persona
+3. CHIAREZZA: Andare dritti al punto senza giri di parole eccessivi
+4. GESTIONE DELLE REAZIONI EMOTIVE: Applicare le tecniche delle emozioni di base
+5. SPAZIO PER LE EMOZIONI: Permettere all'altro di elaborare senza fretta
+
+GESTIONE DELLE EMOZIONI (dal framework delle espressioni del volto):
+- RABBIA: Lasciar sfogare in silenzio → Sostenere → Non reagire alla provocazione
+- PAURA: Alleggerire → Rassicurare con onestà → Non fare promesse vuote
+- TRISTEZZA: Rispettare il silenzio → Presenza senza invadere → Non minimizzare
+- DISGUSTO/DISPREZZO: Evidenziare con empatia → Elaborare → Non prendersela
+
+FEEDBACK CORRETTIVO IN CONTESTO DIFFICILE:
+- Descrivere il FATTO, non giudicare la persona
+- Mostrare le CONSEGUENZE in modo oggettivo
+- ASCOLTARE prima di proporre
+- Riconoscere l'INTENZIONE POSITIVA anche nelle situazioni più dure
+- Orientarsi alla SOLUZIONE, non alla punizione
+
+ADATTAMENTO AL TIPO DI INTERLOCUTORE: "${slLabel}"
+${tipsBlock}
+
+Scenario: ${brief}
+Tipo di interlocutore: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. È andato DRITTO AL PUNTO o ha girato intorno al problema?
+2. Ha mostrato EMPATIA GENUINA senza essere eccessivamente morbido o freddo?
+3. Ha gestito le REAZIONI EMOTIVE dell'interlocutore con le tecniche corrette?
+4. Ha dato SPAZIO all'elaborazione emotiva senza fretta di risolvere?
+5. Ha mantenuto CHIAREZZA sull'obiettivo anche sotto pressione emotiva?
+6. Ha fornito INFORMAZIONI PRATICHE e concrete per il dopo?
+7. Ha preservato la DIGNITÀ dell'interlocutore in ogni momento?
+8. Si è ADATTATO al tipo di interlocutore (${slLabel})?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ FISSARE APPUNTAMENTI (sc1, sc2, sc3, sc4) ═══
+  if (catId === "sales") {
+    return `Executive coach specializzato in vendita assicurativa e tecniche di fissazione appuntamenti. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — FISSARE APPUNTAMENTI:
+
+PROCESSO DI INGAGGIO DEL CLIENTE (adattato dal framework di ingaggio emotivo):
+1. APERTURA: Presentazione chiara, breve, professionale. Motivo specifico della chiamata.
+2. CREAZIONE INTERESSE: Far percepire un VALORE concreto per il cliente (non per te)
+3. GESTIONE OBIEZIONI: Applicare le tecniche di gestione delle resistenze emotive
+4. PROPOSTA APPUNTAMENTO: Specifica (data, ora, durata, modalità), senza impegno
+5. CHIUSURA: Conferma, riepilogo, saluto professionale
+
+GESTIONE DELLE RESISTENZE (dal framework di ingaggio emotivo):
+- "Non ho tempo": ALLEGGERIRE ("Capisco, proprio per questo le propongo solo 15 minuti...")
+- "Non mi interessa": EVIDENZIARE il gap ("Molti clienti pensavano lo stesso, poi hanno scoperto che...")
+- "Ho già tutto": SVILUPPARE CONSAPEVOLEZZA ("Ottimo! Le faccio una sola domanda: se succedesse X...")
+- "Ci devo pensare": INDIRIZZARE con urgenza calibrata, senza pressione
+- Diffidenza/sospetto: RASSICURARE con trasparenza e referenze
+
+REGOLA D'ORO: L'obiettivo è l'APPUNTAMENTO, non la vendita. Non anticipare la soluzione al telefono.
+${tipsBlock}
+
+Scenario: ${brief}
+Difficoltà: ${diffLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. L'APERTURA è stata efficace? (chiara, breve, con motivo specifico)
+2. Ha creato INTERESSE genuino senza anticipare la vendita?
+3. Ha gestito le OBIEZIONI con le tecniche corrette del framework?
+4. Ha proposto l'APPUNTAMENTO in modo specifico (data, ora, durata)?
+5. Ha mantenuto l'obiettivo (appuntamento) senza scivolare nella vendita telefonica?
+6. Ha usato DOMANDE per capire le esigenze prima di proporre?
+7. Il TONO era professionale, caldo ma non invadente?
+8. La CHIUSURA è stata efficace?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ DELEGA (ld1, ld2) ═══
+  if (sc.id === "ld1" || sc.id === "ld2") {
+    const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
+    return `Executive coach specializzato in delega efficace e leadership situazionale. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — GESTIRE LA DELEGA:
+
+CONSIGLI PER DARE MEGLIO DELEGHE (sequenza da seguire):
+1. Indicare la prestazione sotto forma di OBIETTIVI ATTESI — Il collaboratore deve sapere esattamente cosa ci si aspetta
+2. Spiegare al collaboratore il PERCHÉ della delega — Dare senso e contesto alla richiesta
+3. Evidenziare i CRITERI con cui si valuterà — Rendere la valutazione trasparente e oggettiva
+4. Sottolineare le CONSEGUENZE NEGATIVE E QUELLE POSITIVE nel fare bene l'attività delegata — Motivare mostrando l'impatto
+5. Dare una SCADENZA — Tempi chiari e realistici
+6. Chiedere "COME PENSI DI FARE?" — Coinvolgere il collaboratore nel piano d'azione
+7. Dare SUGGERIMENTI ALTERNATIVI (se necessario) — Guidare senza imporre
+8. Verificare il RISULTATO PARZIALE O FINALE — Monitorare senza microgestire
+9. Dare un FEEDBACK POSITIVO o di RISTRUTTURAZIONE — Chiudere il ciclo della delega
+
+ADATTAMENTO AL TIPO DI COLLABORATORE: "${slLabel}"
+- Motivato non competente: Più GUIDA e ISTRUZIONI dettagliate. Verifiche più frequenti. Incoraggiamento.
+- Motivato competente: Più AUTONOMIA. Meno verifiche. Riconoscimento e fiducia.
+- Competente non motivato: Focus sul PERCHÉ. Coinvolgimento nelle decisioni. Ascolto delle resistenze.
+- Non competente e non motivato: Obiettivi PICCOLI e CHIARI. Verifiche ravvicinate. Pazienza e struttura.
+
+FEEDBACK DI CHIUSURA DELLA DELEGA:
+- Positivo + circoscritto al fatto = rinforza comportamento e competenza
+- Negativo + circoscritto al fatto = inibisce e ri-orienta (se si mostra l'alternativa)
+- Evitare SEMPRE feedback sulla persona/generale (sia positivo che negativo)
+${tipsBlock}
+
+Scenario: ${brief}
+Tipo di collaboratore: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. Ha definito OBIETTIVI ATTESI chiari e misurabili?
+2. Ha spiegato il PERCHÉ della delega/richiesta?
+3. Ha esplicitato i CRITERI DI VALUTAZIONE?
+4. Ha comunicato CONSEGUENZE positive e negative?
+5. Ha dato una SCADENZA chiara?
+6. Ha chiesto "COME PENSI DI FARE?" — coinvolgendo il collaboratore?
+7. Ha previsto VERIFICHE appropriate (senza microgestire)?
+8. Si è ADATTATO al tipo di collaboratore (${slLabel})?
+9. Il feedback finale era CIRCOSCRITTO AL FATTO?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ INFLUENZARE UN COMPORTAMENTO (ld3) ═══
+  if (INF_SCENARIOS.includes(sc.id)) {
+    const infVar = getInfVariant(d);
+    const infLabel = infVar?.label || diffLabel;
+    return `Executive coach specializzato in influenzamento e comunicazione persuasiva. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — INFLUENZARE UN COMPORTAMENTO:
+
+Il framework combina tecniche di FEEDBACK CORRETTIVO e INGAGGIO EMOTIVO:
+
+STRUTTURA DELL'INFLUENZAMENTO:
+1. Descrivere il COMPORTAMENTO OSSERVATO — fatti concreti, non interpretazioni ("Ho notato che..." non "Sei sempre...")
+2. Comunicare l'IMPATTO CONCRETO — conseguenze misurabili del comportamento
+3. ASCOLTARE LE RAGIONI dell'altro — capire il perché prima di proporre il cambiamento
+4. Riconoscere L'INTENZIONE POSITIVA — anche se il comportamento è sbagliato
+5. CO-COSTRUIRE LA SOLUZIONE — "Cosa possiamo fare di diverso?" non "Devi fare così"
+6. Ottenere un IMPEGNO SPECIFICO — con tempi e verifiche
+
+PRINCIPI DAL FRAMEWORK FEEDBACK:
+- Feedback CIRCOSCRITTO AL FATTO, mai sulla persona
+- Stigmatizzare il COMPORTAMENTO, non la persona
+- Mostrare FIDUCIA sulle possibilità di miglioramento
+
+PRINCIPI DAL FRAMEWORK INGAGGIO EMOTIVO:
+- Gestire le RESISTENZE EMOTIVE con le tecniche appropriate (rabbia → sfogare; paura → rassicurare; disprezzo → evidenziare con empatia)
+- Usare domande per SVILUPPARE CONSAPEVOLEZZA
+- RASSICURARE prima di proporre il cambiamento
+
+ADATTAMENTO ALL'INTERLOCUTORE: "${infLabel}"
+- Collaboratore: Focus su ascolto e riconoscimento. Non imporre, coinvolgere.
+- Capo/Autorità: Portare DATI e proposte concrete. Rispettare l'autorità. Non insegnare il mestiere.
+- Gruppo: Ascoltare le diverse voci. Dare risposte concrete. Coinvolgere nelle decisioni operative.
+${tipsBlock}
+
+Scenario: ${brief}
+Chi si influenza: ${infLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. Ha descritto il COMPORTAMENTO in modo oggettivo (fatti, non giudizi)?
+2. Ha comunicato l'IMPATTO CONCRETO del comportamento?
+3. Ha ASCOLTATO le ragioni dell'altro prima di proporre cambiamenti?
+4. Ha riconosciuto l'INTENZIONE POSITIVA?
+5. Ha CO-COSTRUITO la soluzione o l'ha imposta?
+6. Ha ottenuto un IMPEGNO SPECIFICO con tempi?
+7. Ha gestito le RESISTENZE EMOTIVE con le tecniche appropriate?
+8. Si è ADATTATO al tipo di interlocutore (${infLabel})?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ COACHING (co1, co2, co3) ═══
+  if (catId === "coaching") {
+    const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
+    return `Executive coach specializzato in coaching manageriale e sviluppo dei collaboratori. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — COACHING E AFFIANCAMENTO:
+
+PRINCIPI DI COACHING EFFICACE:
+1. Il coach FACILITA, non impone — Fa domande più che dare risposte
+2. ASCOLTO ATTIVO — Ascoltare 80%, parlare 20%
+3. EMPOWERMENT — Costruire autonomia e sicurezza nel collaboratore
+4. FEEDBACK COSTRUTTIVO — Sempre circoscritto al fatto, mai sulla persona
+
+PATTO DI COACHING (per co1):
+- Spiegare COS'È il coaching e PERCHÉ lo si fa
+- Definire OBIETTIVI CONDIVISI (non imposti)
+- Stabilire REGOLE e FREQUENZA degli incontri
+- Chiedere le ASPETTATIVE del collaboratore
+- Creare un clima di FIDUCIA e ALLEANZA
+
+AFFIANCAMENTO (per co2, co3):
+- BRIEFING PRIMA: allinearsi su obiettivi e strategia
+- Definire il RUOLO dell'osservatore (quando intervenire, quando no)
+- Durante: LASCIARE FARE, intervenire solo se strettamente necessario
+- Non sminuire MAI davanti al cliente/interlocutore
+- DEBRIEFING DOPO: prima i punti positivi, poi i miglioramenti
+- Valorizzare SEMPRE cosa ha fatto bene prima di correggere
+
+FRAMEWORK FEEDBACK PER IL DEBRIEFING:
+- Positivo + circoscritto: "In quel momento hai gestito bene la domanda del cliente perché..."
+- Correttivo + circoscritto: "Quando il cliente ha detto X, potresti provare a..."
+- EVITARE: "Sei stato bravo/male" (sulla persona) → PREFERIRE: "Quel passaggio è stato efficace/da rivedere"
+
+ADATTAMENTO AL TIPO DI COLLABORATORE: "${slLabel}"
+${tipsBlock}
+
+Scenario: ${brief}
+Tipo di collaboratore: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. Ha FACILITATO o ha imposto? (Quante domande vs. quante istruzioni?)
+2. Ha praticato ASCOLTO ATTIVO (rapporto ascolto/parlato)?
+3. Ha costruito EMPOWERMENT o ha creato dipendenza?
+4. Il feedback era CIRCOSCRITTO AL FATTO?
+5. Ha fatto un BRIEFING/DEBRIEFING adeguato (se applicabile)?
+6. Ha rispettato lo SPAZIO del collaboratore senza microgestire?
+7. Ha creato un clima di FIDUCIA e alleanza?
+8. Si è ADATTATO al tipo di collaboratore (${slLabel})?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ GOVERNARE GLI ASPETTI EMOTIVI (ei1-ei7) ═══
+  if (catId === "emotional") {
+    const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
+    // Identify the specific emotion from the scenario
+    const emotionMap = {
+      ei1: { emotion: "Burnout/Esaurimento", techniques: "ASCOLTO senza giudizio. Rispettare i CONFINI. Supporto NON soluzioni. Momento PRIVATO. Ascoltare l'80% del tempo." },
+      ei2: { emotion: "Rabbia", techniques: "LASCIAR SFOGARE in silenzio assoluto, senza sorridere. Non dire 'calmati'. SOSTENERE: 'Mi spiace, non ci siamo capiti' o chiedere scusa con la struttura in 3 passi (Mi dispiace → Non succederà più → Cosa posso fare per rimediare?). Affrontare i fatti SOLO quando la temperatura scende." },
+      ei3: { emotion: "Disprezzo/Sarcasmo", techniques: "NON riprendere davanti al gruppo. Prendere DA PARTE con rispetto. EVIDENZIARE con empatia: 'Cosa c'è dietro?' → farsi raccontare. Valorizzare il punto di vista NASCOSTO. Non rispondere al sarcasmo con sarcasmo." },
+      ei4: { emotion: "Tristezza", techniques: "Avvicinarsi con CALMA, senza fretta. Non forzare. Accettare il SILENZIO come risposta. NON offrire soluzioni non richieste. Mostrare che si vede la PERSONA, non solo la risorsa. Palpebre allentate, angoli bocca in giù = segnali da riconoscere." },
+      ei5: { emotion: "Paura", techniques: "RICONOSCERE la paura come legittima. Non fare PROMESSE che non si possono mantenere. Essere ONESTI su ciò che si sa e non si sa. ALLEGGERIRE e RASSICURARE. Dare senso di CONTROLLO: cosa può fare lui concretamente. Focalizzare su AZIONI, non su scenari." },
+      ei6: { emotion: "Senso di Colpa", techniques: "Non aggredire chi è già a terra. Non MINIMIZZARE: l'errore c'è stato. SEPARARE la persona dall'errore ('Hai sbagliato, ma non sei l'errore'). Concentrarsi sul RECUPERO, non sulla punizione. VERBALIZZARE IL PERDONO. Restituire FIDUCIA con un compito concreto." },
+      ei7: { emotion: "Beffa/Canzonatura", techniques: "NON reagire mai davanti al gruppo. Parlare a QUATTR'OCCHI con fermezza ma senza rabbia. Usare MESSAGGI-IO: 'Quando fai X, io mi sento Y'. Non accusare di cattiveria. Stabilire un CONFINE chiaro senza minacciare." }
+    };
+    const emoInfo = emotionMap[sc.id] || { emotion: "Emozione complessa", techniques: "Applicare i principi generali del framework emotivo." };
+
+    return `Executive coach specializzato in intelligenza emotiva e gestione delle emozioni nel contesto lavorativo. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO — GOVERNARE GLI ASPETTI EMOTIVI:
+
+EMOZIONE DA GESTIRE IN QUESTO SCENARIO: ${emoInfo.emotion}
+
+RICONOSCIMENTO DELLE ESPRESSIONI (dal framework delle espressioni del volto):
+- GIOIA: zampe di gallina agli occhi, angoli bocca sollevati
+- SORPRESA: sopracciglia sollevate e incurvate, mascella abbassata, bianco degli occhi visibile
+- RABBIA: sopracciglia abbassate e ravvicinate, sguardo fisso, palpebre tese, narici dilatate, labbra serrate
+- DISGUSTO/DISPREZZO: sopracciglia abbassate, naso arricciato, labbro superiore sollevato
+- PAURA: sopracciglia sollevate e ravvicinate, palpebre sollevate, bocca aperta e labbra tese
+- TRISTEZZA: angoli interni sopracciglia sollevati, angoli bocca in giù, palpebre allentate
+
+TECNICHE SPECIFICHE PER "${emoInfo.emotion}":
+${emoInfo.techniques}
+
+PRINCIPI GENERALI DI GESTIONE EMOTIVA:
+- VERBALIZZARE l'emozione dell'altro ("Vedo che sei arrabbiato/preoccupato/...")
+- Non MINIMIZZARE ("Non è niente", "Non ti preoccupare" sono frasi da evitare)
+- ASCOLTARE prima di agire — l'emozione va accolta, non risolta immediatamente
+- Distinguere tra EMOZIONE e PROBLEMA — prima si gestisce l'emozione, poi il problema
+- Il TIMING è tutto: intervenire troppo presto = non ascoltare, troppo tardi = sembrare indifferenti
+
+FRAMEWORK FEEDBACK applicato alle emozioni:
+- Feedback circoscritto al FATTO, non alla persona, anche quando si è sotto pressione emotiva
+- Riconoscere L'INTENZIONE POSITIVA anche nei comportamenti problematici
+- Mostrare FIDUCIA nelle possibilità di miglioramento/recupero
+
+ADATTAMENTO AL TIPO DI COLLABORATORE: "${slLabel}"
+${tipsBlock}
+
+Scenario: ${brief}
+Emozione principale: ${emoInfo.emotion}
+Tipo di collaboratore: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta SPECIFICAMENTE:
+1. Ha RICONOSCIUTO e VERBALIZZATO l'emozione dell'interlocutore?
+2. Ha applicato le TECNICHE SPECIFICHE corrette per "${emoInfo.emotion}"?
+3. Ha rispettato il TIMING — quando intervenire e quando restare in silenzio?
+4. Ha evitato le TRAPPOLE tipiche (minimizzare, consigliare troppo presto, reagire emotivamente)?
+5. Ha separato l'EMOZIONE dal PROBLEMA, gestendoli in sequenza?
+6. Ha mantenuto il proprio EQUILIBRIO EMOTIVO sotto pressione?
+7. Ha creato uno SPAZIO SICURO per l'espressione emotiva?
+8. Si è ADATTATO al tipo di collaboratore (${slLabel})?
+
+${EVAL_JSON_SCHEMA}`;
+  }
+
+  // ═══ FALLBACK GENERICO MIGLIORATO ═══
+  const slLabel = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(x => x.id === d)?.label || d;
+  return `Executive coach con esperienza in comunicazione manageriale, feedback e gestione delle relazioni professionali. Valuta questo roleplay.
+
+FRAMEWORK DI RIFERIMENTO GENERALE:
+
+COMUNICAZIONE EFFICACE:
+- Feedback sempre CIRCOSCRITTO AL FATTO, non sulla persona
+- ASCOLTARE prima di proporre soluzioni (regola 70/30: ascolta 70%, parla 30%)
+- Riconoscere l'INTENZIONE POSITIVA dell'interlocutore
+- Orientamento alla SOLUZIONE, non al problema
+- COINVOLGERE l'altro: "Cosa ne pensi?" "Come vorresti procedere?"
+
+GESTIONE DELLE EMOZIONI:
+- Riconoscere e VERBALIZZARE le emozioni dell'interlocutore
+- Non minimizzare, non reagire emotivamente
+- Gestire le resistenze con empatia: rabbia → sfogare; paura → rassicurare; disprezzo → evidenziare con curiosità
+
+STRUTTURA DI UN INTERVENTO EFFICACE:
+1. Apertura empatica e contestualizzazione
+2. Descrizione oggettiva della situazione
+3. Ascolto attivo delle reazioni
+4. Co-costruzione della soluzione
+5. Impegno concreto e verifiche
+${tipsBlock}
+
+Scenario: ${brief}
+Difficoltà/Tipo: ${slLabel}
+Ruolo utente: ${roleUser} | Criteri: ${sc.eval.join(", ")}
+
+CONVERSAZIONE:
+${t}
+
+${EVAL_RULES}
+
+Valuta rispetto ai criteri specifici: ${sc.eval.join(", ")}
+Per ogni criterio, fornisci un ESEMPIO CONCRETO dalla conversazione.
+
+${EVAL_JSON_SCHEMA}`;
 }
 
 // ─── AUTH HELPER ─────────────────────────────────────────────────────────────
