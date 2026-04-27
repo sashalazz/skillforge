@@ -1036,11 +1036,13 @@ export default function App() {
     setIsGeneratingReport(true); nav("report");
     const prompt = evalPr(selectedScenario, convoRef.current, difficulty);
     let parsed = null;
-    for (let a = 0; a < 2 && !parsed; a++) {
-      const raw = await callAI([{ role: "user", content: prompt }], "Executive coach. SOLO JSON. Inizia con { finisci con }.", 1024);
-      try { const c = raw.replace(/```json|```/g, "").trim(); const s = c.indexOf("{"), e = c.lastIndexOf("}"); if (s >= 0 && e > s) parsed = JSON.parse(c.slice(s, e + 1)); } catch {}
+    for (let a = 0; a < 3 && !parsed; a++) {
+      const raw = await callAI([{ role: "user", content: prompt }], "Sei un executive coach esperto. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo il JSON. Nessun markdown. Inizia con { e finisci con }. Tutti i campi sono obbligatori.", 2048);
+      console.log(`[evalReport] attempt ${a + 1}, raw length: ${raw?.length}, raw preview:`, raw?.substring(0, 200));
+      try { const c = raw.replace(/```json|```/g, "").trim(); const s = c.indexOf("{"), e = c.lastIndexOf("}"); if (s >= 0 && e > s) parsed = JSON.parse(c.slice(s, e + 1)); } catch (err) { console.warn(`[evalReport] JSON parse failed attempt ${a + 1}:`, err.message); }
     }
     if (!parsed) {
+      console.error("[evalReport] All attempts failed, using fallback");
       const bs = [6, 7, 5, 8, 6];
       parsed = { overall_score: 6, summary: "Buon impegno, serve più struttura.", scores: selectedScenario.eval.map((c, i) => ({ criterion: c, score: bs[i % 5], comment: `Lavora su "${c.toLowerCase()}".` })), strengths: ["Volontà", "Tono appropriato", "Focus"], improvements: ["Più domande aperte", "Più esempi", "Più struttura"], key_moment: "Il momento iniziale ha impostato il tono.", mistake_to_avoid: "Non saltare subito alla soluzione.", better_phrase: "'Devi migliorare' → 'Come vedi la situazione?'", academy_tip: "Regola 70/30: ascolta 70%, parla 30%." };
     }
