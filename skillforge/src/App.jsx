@@ -55,6 +55,17 @@ const DIFF_INF = [
     ai_p: "Sei il portavoce di un team di 8 commerciali durante una riunione. Esprimi le diverse voci del gruppo alternandole realisticamente. I SENIOR dicono cose come: 'Il vecchio sistema funziona, perché cambiare?', 'Ho i miei clienti da 10 anni, non ho bisogno di un software per gestirli'. I JUNIOR dicono: 'Un altro sistema da imparare? Non abbiamo già abbastanza da fare?', 'E se sbagliamo qualcosa nella migrazione?'. GLI SCETTICI: 'L'ultimo cambiamento doveva semplificarci la vita e invece...'. Se chi conduce la riunione ascolta le obiezioni, dà risposte concrete, mostra i benefici pratici e coinvolge il gruppo nelle decisioni operative, il consenso cresce progressivamente. Se impone dall'alto o minimizza le preoccupazioni, il gruppo si compatta nella resistenza. Max 2-3 frasi, alternando le voci." },
 ];
 
+// ─── SEZIONI CONSENTITE ─────────────────────────────────────────────────────
+const ALL_SECTIONS = [
+  { id: "feedback",   icon: "💬", label: "Dare Feedback" },
+  { id: "difficult",  icon: "🔥", label: "Conversazioni Difficili" },
+  { id: "sales",      icon: "📅", label: "Fissare Appuntamenti" },
+  { id: "leadership", icon: "🎯", label: "Esercitare Leadership" },
+  { id: "coaching",   icon: "🏋️", label: "Condurre Coaching" },
+  { id: "emotional",  icon: "❤️", label: "Aspetti Emotivi" },
+  { id: "ingaggio",   icon: "⚡", label: "Ingaggio Emotivo" },
+];
+
 function getDiffOptions(categoryId, scenarioId) {
   if (INGAGGIO_SCENARIOS.includes(scenarioId)) return DIFF_INGAGGIO;
   if (INF_SCENARIOS.includes(scenarioId)) return DIFF_INF;
@@ -916,6 +927,61 @@ async function authCall(body, token) {
 }
 
 // ─── COMPONENTS ─────────────────────────────────────────────────────────────
+// ─── COMPONENTE SEZIONI CONSENTITE ──────────────────────────────────────────
+function SectionPermissions({ user, onUpdate }) {
+  const initSections = () =>
+    user.allowed_sections ? [...user.allowed_sections] : ALL_SECTIONS.map(s => s.id);
+
+  const [sections, setSections] = React.useState(initSections);
+  const [status, setStatus] = React.useState(""); // "" | "saving" | "saved"
+
+  React.useEffect(() => {
+    setSections(initSections());
+  }, [user.id, user.allowed_sections]);
+
+  const toggle = (id) => {
+    const next = sections.includes(id)
+      ? sections.filter(s => s !== id)
+      : [...sections, id];
+    setSections(next);
+    setStatus("saving");
+    const toSave = next.length === ALL_SECTIONS.length ? null : next;
+    onUpdate(toSave);
+    setTimeout(() => setStatus("saved"), 700);
+    setTimeout(() => setStatus(""), 2200);
+  };
+
+  return (
+    <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
+      <div style={{ fontSize: "12px", color: C.muted, marginBottom: "6px", display: "flex", alignItems: "center", gap: "8px" }}>
+        Sezioni consentite
+        {status === "saving" && <span style={{ fontSize: "11px", color: C.muted }}>salvataggio…</span>}
+        {status === "saved"  && <span style={{ fontSize: "11px", color: C.success }}>✓ salvato</span>}
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+        {ALL_SECTIONS.map(sec => {
+          const active = sections.includes(sec.id);
+          return (
+            <button
+              key={sec.id}
+              onClick={() => toggle(sec.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: "4px",
+                padding: "4px 10px", borderRadius: "20px", fontSize: "12px",
+                border: `1px solid ${active ? C.accent : C.border}`,
+                background: active ? `${C.accent}22` : "transparent",
+                color: active ? C.accent : C.muted,
+                cursor: "pointer", transition: "all .15s",
+              }}>
+              {sec.icon} {sec.label} {active ? "✓" : ""}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Avatar({ speaking, thinking, size = 180 }) {
   const [m, setM] = useState(false);
   useEffect(() => { if (!speaking) { setM(false); return; } const iv = setInterval(() => setM(p => !p), 170); return () => clearInterval(iv); }, [speaking]);
@@ -1064,6 +1130,15 @@ export default function App() {
   const setUserLimit = async (userId, limit) => {
     await authCall({ action: "admin_update_user", userId, daily_limit: limit }, token);
     loadAdminUsers();
+  };
+
+  const updateAllowedSections = async (userId, sections) => {
+    try {
+      await authCall({ action: "admin_update_user", userId, allowed_sections: sections }, token);
+      setAdminUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, allowed_sections: sections } : u
+      ));
+    } catch (e) { console.error("Errore aggiornamento sezioni:", e); }
   };
 
   // ─── Leaderboard from DB ──────────────────────────────────
@@ -1531,6 +1606,14 @@ export default function App() {
                     </div>
                   )}
 
+                  {/* ── SEZIONI CONSENTITE ── */}
+                  {u.approved && !u.is_admin && (
+                    <SectionPermissions
+                      user={u}
+                      onUpdate={(newSections) => updateAllowedSections(u.id, newSections)}
+                    />
+                  )}
+
                   {!u.is_admin && (
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px", paddingTop: "10px", borderTop: `1px solid ${C.border}` }}>
                       <div style={{ fontSize: "12px", color: C.muted, flex: 1 }}>Sessioni/giorno:</div>
@@ -1574,7 +1657,10 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {CATEGORIES.map(cat => (
+              {(user?.allowed_sections
+                ? CATEGORIES.filter(c => user.allowed_sections.includes(c.id))
+                : CATEGORIES
+              ).map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
