@@ -404,22 +404,10 @@ function evalPr(sc, convo, d) {
   const diffLabel = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(x => x.id === d)?.label || d;
   const tipsBlock = sc.tips?.length ? `\nTIPS DELLO SCENARIO (l'utente aveva accesso a questi suggerimenti):\n${sc.tips.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : "";
 
-  // Framework di riferimento (estratto dai PDF di formazione) — fonte unica
-  // su cui il valutatore deve basare il giudizio. Iniettato in CIMA al prompt
-  // di valutazione affinché ogni feedback sia ancorato al modello formativo.
-  const fw = getRelevantFramework(sc.id, catId);
-  const frameworkHeader = `=== MODELLO DI RIFERIMENTO PER LA VALUTAZIONE (PDF formativi) ===
-Le tecniche corrette, la sequenza dell'intervento, le tipologie di feedback,
-la gestione delle resistenze emotive e il riconoscimento delle espressioni del
-volto sono definite UNICAMENTE da questo modello. Ogni giudizio, suggerimento
-e tecnica nel feedback finale DEVE essere ancorato a questo modello, citandone
-le sezioni quando rilevante.
-
-${fw}
-
-=== FINE MODELLO ===
-
-`;
+  // NON iniettiamo il framework completo (troppo pesante: ~1500-2000 token).
+  // Claude conosce già i modelli di coaching/feedback/ingaggio emotivo.
+  // Bastano i criteri specifici dello scenario e la conversazione.
+  const frameworkHeader = "";
 
   // ═══ INGAGGIO EMOTIVO (ig1, ig2, ig3) ═══
   if (isIngaggio) {
@@ -1331,10 +1319,19 @@ export default function App() {
 
   const genReport = useCallback(async () => {
     setIsGeneratingReport(true); nav("report");
+    const catId = getScenarioCategory(selectedScenario.id);
+    const fw = getRelevantFramework(selectedScenario.id, catId);
+    // Framework nel system prompt (piu efficiente: non conta come conversazione)
+    const evalSystem = `Sei un executive coach esperto di Alma Pratica.
+Il tuo giudizio si basa ESCLUSIVAMENTE su questo modello di riferimento proprietario:
+
+${fw}
+
+Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. Nessun markdown. Inizia con { e finisci con }. Tutti i campi sono obbligatori.`;
     const prompt = evalPr(selectedScenario, convoRef.current, difficulty);
     let parsed = null;
     for (let a = 0; a < 3 && !parsed; a++) {
-      const raw = await callAI([{ role: "user", content: prompt }], "Sei un executive coach esperto. Basa OGNI giudizio, commento, frase migliorativa e tecnica suggerita ESCLUSIVAMENTE sul MODELLO DI RIFERIMENTO fornito nel prompt (estratto dai PDF di formazione su feedback, delega e ingaggio emotivo). Non inventare tecniche fuori dal modello. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo il JSON. Nessun markdown. Inizia con { e finisci con }. Tutti i campi sono obbligatori.", 2048);
+      const raw = await callAI([{ role: "user", content: prompt }], evalSystem, 4096);
       console.log(`[evalReport] attempt ${a + 1}, raw length: ${raw?.length}, raw preview:`, raw?.substring(0, 200));
       try { const c = raw.replace(/```json|```/g, "").trim(); const s = c.indexOf("{"), e = c.lastIndexOf("}"); if (s >= 0 && e > s) parsed = JSON.parse(c.slice(s, e + 1)); } catch (err) { console.warn(`[evalReport] JSON parse failed attempt ${a + 1}:`, err.message); }
     }
