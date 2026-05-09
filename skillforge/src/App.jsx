@@ -1657,8 +1657,8 @@ export default function App() {
           </div>
           {!selectedCategory ? (
             <div style={S.grid}>
-              {(user?.allowed_sections
-                ? CATEGORIES.filter(c => user.allowed_sections.includes(c.id))
+              {(user?.allowedSections
+                ? CATEGORIES.filter(c => user.allowedSections.includes(c.id))
                 : CATEGORIES
               ).map(cat => (
                 <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
