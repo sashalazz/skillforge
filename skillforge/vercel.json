@@ -1,7 +1,21 @@
-{
+
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/chat.js": {
+      "maxDuration": 30
+    },
+    "api/auth.js": {
+      "maxDuration": 30
+    }
+  }
 }
