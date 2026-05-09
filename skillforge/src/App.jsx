@@ -97,6 +97,169 @@ function diffMod(d) {
   return "\nMEDIO: Realistico. Alterna collaborazione e resistenza. Max 2-3 frasi.";
 }
 
+// ─── FRAMEWORK DI RIFERIMENTO (estratto dai PDF di formazione) ────────────
+// Single source of truth: questi due blocchi sono iniettati sia nei system
+// prompt dell'AI (per il roleplay) sia nei prompt di valutazione (per il
+// feedback finale), così che il comportamento dell'AI sia sempre coerente
+// con il modello formativo dei due documenti.
+
+// PDF: "Gestione del feedback" + "Gestire la delega"
+const FRAMEWORK_FEEDBACK = `MODELLO DI RIFERIMENTO — GESTIONE DEL FEEDBACK E DELLA DELEGA
+
+A. MODALITÀ EFFICACI PER DARE FEEDBACK
+1. Prepararsi con DATI E FATTI, pochi e focalizzati
+2. Scegliere LUOGO e MOMENTO "privato"
+3. Focalizzare l'intervento su UN SOLO OBIETTIVO specifico
+4. Indicare i COMPORTAMENTI ALTERNATIVI CONCRETI da tenere
+5. Mostrare FIDUCIA sulle possibilità di miglioramento
+6. Eventualmente rendersi disponibile per un SUPPORTO
+
+B. MATRICE DEI TIPI DI FEEDBACK ED EFFETTI
+- POSITIVO + SUL FATTO, CIRCOSCRITTO ("Questo lavoro è ben fatto"):
+  effetto → rinforza il comportamento, la consapevolezza, la competenza
+- POSITIVO + SULLA PERSONA, GENERALE ("Sei in gamba! Sei il migliore!"):
+  effetto → rinforza l'autostima (se non si esagera) ma può creare invidie
+- NEGATIVO + SUL FATTO, CIRCOSCRITTO ("Questo lavoro non va bene"):
+  effetto → inibisce il comportamento e lo ri-orienta (se si mostra l'alternativa)
+- NEGATIVO + SULLA PERSONA, GENERALE ("Sei negato! Sei un incapace!"):
+  effetto → DA EVITARE: paralizza, demotiva o suscita aggressività
+
+C. STRUTTURA DELL'INTERVENTO CORRETTIVO (sequenza)
+1. Descrivere il RISULTATO RAGGIUNTO dal collaboratore in modo chiaro e circoscritto
+2. Mostrare le CONSEGUENZE NEGATIVE e il livello di gravità
+   (i "perché" rispetto ai risultati dell'Agenzia/team)
+3. ASCOLTARE senza interrompere le "osservazioni-motivazioni" del collaboratore
+4. Riconoscere "L'INTENZIONE POSITIVA"
+5. STIGMATIZZARE IL COMPORTAMENTO (non la persona)
+6. Chiedere: "COSA PUOI FARE DI DIVERSO la prossima volta / per rimediare?"
+7. Descrivere un'ALTERNATIVA EFFICACE (se necessario)
+8. Ottenere il CONSENSO e concordare un IMPEGNO
+9. Eventualmente concordare un MOMENTO DI VERIFICA
+
+D. CONSIGLI PER DARE MEGLIO LE DELEGHE
+1. Indicare la prestazione sotto forma di OBIETTIVI ATTESI
+2. Spiegare al collaboratore il PERCHÉ della delega
+3. Evidenziare i CRITERI con cui si valuterà
+4. Sottolineare le CONSEGUENZE NEGATIVE E QUELLE POSITIVE nel fare bene
+   l'attività delegata
+5. Dare una SCADENZA
+6. Chiedere "COME PENSI DI FARE?"
+7. Dare SUGGERIMENTI ALTERNATIVI (se necessario)
+8. Verificare il RISULTATO PARZIALE O FINALE
+9. Dare un FEEDBACK POSITIVO o di RISTRUTTURAZIONE`;
+
+// PDF: "Espressioni del volto" + "Ingaggiare il cliente" + resistenze emotive
+const FRAMEWORK_EMOTIONS = `MODELLO DI RIFERIMENTO — INGAGGIO EMOTIVO E GESTIONE DELLE EMOZIONI
+
+A. ESPRESSIONI DEL VOLTO (riconoscere le emozioni di base)
+- GIOIA: zampe di gallina agli angoli esterni degli occhi; angoli della bocca
+  sollevati e tirati indietro
+- SORPRESA: sopracciglia sollevate e incurvate; mascella che si abbassa;
+  palpebre aperte (si vede il bianco degli occhi sopra e spesso sotto l'iride)
+- RABBIA: sopracciglia abbassate e ravvicinate; labbra serrate o aperte e tese
+  con contorno squadrato; sguardo fisso e palpebre tese; narici dilatate
+- DISGUSTO / DISPREZZO: sopracciglia abbassate; labbro superiore sollevato;
+  naso arricciato; labbro inferiore sollevato e premuto contro il superiore
+  oppure abbassato e lievemente protruso
+- PAURA: sopracciglia sollevate e ravvicinate; bocca aperta e labbra tese o
+  stirate all'indietro; palpebre sollevate
+- TRISTEZZA: angoli interni delle sopracciglia sollevati; angoli della bocca
+  piegati in giù; palpebre allentate
+
+B. PROCESSO DECISIONALE DEL CLIENTE (tre fasi che il commerciale deve guidare)
+1. SVILUPPARE CONSAPEVOLEZZA EMOTIVA
+   - Partire dall'EVENTO concreto → QUANTIFICARLO IN EURO
+   - Quantificazione € → portare il cliente NELL'AREA EMOTIVA
+   - Aiutare il cliente con DOMANDE e AFFERMAZIONI (a risposta SI)
+2. ASSUMERSI LA RESPONSABILITÀ
+   - VERBALIZZARE IL DISAGIO del cliente
+   - SUPPORTARE e RASSICURARE
+   - CONDIVIDERE LA SOLUZIONE e le RISORSE ECONOMICHE DISPONIBILI
+3. EFFETTUARE IL CAMBIAMENTO
+   - COMPILARE IL MODULO / chiudere la trattativa
+
+C. INGAGGIO EMOTIVO — ESEMPIO TCM (Temporanea Caso Morte)
+Domanda di apertura: "Ha una polizza sulla vita?"
+- CASO SÌ → "Come è fatta? Che caratteristiche ha?"
+  • LO SA (beneficiario Banca): complimenti → evidenziare i gap
+    ("Quindi i soldi vanno alla banca? → SI. La sua famiglia si troverà a
+    vivere con X.000€ in meno → SI. Può essere un problema? → SI") →
+    rassicurare e chiudere ("Mi rendo conto che è un pensiero spiacevole,
+    vediamo insieme cosa possiamo fare…")
+  • LO SA (completa): gestire relazione → confrontare → rassicurare
+    ("Ma come?! Non le hanno spiegato nulla? Ok, facciamo così, la vediamo
+    insieme e vediamo se hanno tutelato la sua famiglia in modo adeguato…")
+  • NON LO SA: complimenti → indagare altri rischi
+    ("E se invece di morire si fa così male da non poter più lavorare,
+    ce l'ha una copertura infortuni?")
+- CASO NO → evidenziare i gap per sviluppare consapevolezza
+    ("Quindi se lei venisse a mancare la sua famiglia si troverebbe a dover
+    pagare il mutuo → SI. Pagare il mutuo senza il suo reddito di X.000€
+    può essere un problema per loro? → SI") → rassicurare e chiudere
+    ("Mi spiace parlarle di un tema così spaventoso… guardi che con poco
+    se la cava!" — il cliente chiederà spontaneamente "Poco quanto?")
+
+D. LE EMOZIONI DA GESTIRE (resistenze emotive del cliente)
+1. SENSO DI COLPA: "sì, lo so… è un po' che ci penso…"
+2. PAURA: di non essere creduto, di essere scoperto, di essere raggirato
+3. DISGUSTO / DISPREZZO: ha avuto o gli hanno raccontato un'esperienza negativa,
+   non si fida della Compagnia
+4. RABBIA: ha subito un danno importante o è stata delusa una sua aspettativa
+5. PIACERE DELLA BEFFA: dice SÌ, ma vi sta prendendo in giro e continuerà
+   a fare come gli pare
+
+E. TECNICHE PER OGNI RESISTENZA EMOTIVA
+- SENSO DI COLPA → PERDONARE + INDIRIZZARE
+  (1) Verbalizzare il "perdono": "è normale, con due figli, il lavoro,
+      un sacco di persone dovrebbero e non lo fanno…"
+  (2) Indirizzare: "adesso lo facciamo perché non vorrei poi che lei,
+      in difficoltà senza soldi, mi sgridasse dicendo che dovevo insistere"
+- PAURA → ALLEGGERIRE + RASSICURARE
+  (1) Alleggerire: allontanarsi fisicamente dal tavolo, cambiare tono
+  (2) Rassicurare: "Mi spiace parlarle di un argomento così spaventoso,
+      ma guardi che con poco se la cava…"
+- DISPREZZO → EVIDENZIARE + ELABORARE
+  (1) Evidenziare: "Mi spiace sentirla parlare così, cosa le è successo?"
+      [farsi raccontare la storia]
+  (2) Elaborare: "Mi spiace per suo cugino…" + tecnica della "pecora nera"
+      per distinguersi dall'esperienza negativa subita
+- RABBIA → LASCIAR SFOGARE + SOSTENERE (se eccessiva, accompagnare all'uscita)
+  (1) Lasciar sfogare: assoluto silenzio, senza sorridere
+  (2) Sostenere: "Mi spiace, non ci siamo capiti…" oppure chiedere scusa
+      con la struttura in 3 passi:
+      1) "Mi dispiace, chiedo scusa"
+      2) "Non succederà più"
+      3) "Cosa posso fare per rimediare?"
+- PIACERE DELLA BEFFA → COMPLICITÀ + INDIRIZZO
+  (1) Essere complici per far confessare: "Caspita la vedo molto preparato,
+      ma sta facendo il giro delle 7 chiese e poi fa la polizza da suo
+      cugino? Fa bene, farei così anch'io…"
+  (2) Indirizzare: "Finisca di fare il giro poi viene qui con la sua
+      migliore proposta e la confrontiamo con la nostra, se la nostra
+      è meglio lo fa con me…"`;
+
+// Helper: ritorna i blocchi del framework rilevanti per uno scenario.
+// Usato sia in sysPr (roleplay) che in evalPr (valutazione).
+function getRelevantFramework(scId, catId) {
+  const blocks = [];
+  // Categorie / scenari che si poggiano sul modello del feedback e della delega
+  if (catId === "feedback" || catId === "coaching" || catId === "difficult"
+      || scId === "ld1" || scId === "ld2" || scId === "ld3") {
+    blocks.push(FRAMEWORK_FEEDBACK);
+  }
+  // Categorie / scenari che si poggiano sul modello emotivo e di ingaggio
+  if (catId === "ingaggio" || catId === "emotional" || catId === "difficult"
+      || catId === "sales" || scId === "ld3"
+      || INGAGGIO_SCENARIOS.includes(scId)) {
+    blocks.push(FRAMEWORK_EMOTIONS);
+  }
+  // Default: se nulla matcha (fallback), includi entrambi
+  if (blocks.length === 0) {
+    blocks.push(FRAMEWORK_FEEDBACK, FRAMEWORK_EMOTIONS);
+  }
+  return blocks.join("\n\n");
+}
+
 // ─── SCENARIOS ──────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: "feedback", icon: "💬", label: "Dare Feedback", color: C.accent, description: "Feedback costruttivo ed efficace", scenarios: [
@@ -150,19 +313,54 @@ function sysPr(sc, d) {
   const brief = inf ? inf.brief : sc.brief;
   const personality = inf ? inf.ai_p : sc.ai_p;
   
-  if (isIngaggio) {
-    const ingaggioFramework = `\nFRAMEWORK INGAGGIO CLIENTE (segui rigorosamente):
-Il processo decisionale del cliente ha 3 fasi che il consulente deve guidare:
-1. SVILUPPARE CONSAPEVOLEZZA EMOTIVA: Il consulente deve partire dall'evento concreto, quantificarlo in euro (€), e portarti nell'area emotiva facendoti capire l'impatto sulla tua vita/famiglia.
-2. ASSUMERSI LA RESPONSABILITÀ: Tu devi verbalizzare il tuo disagio. Il consulente deve supportarti e rassicurarti. Poi condivide la soluzione e le risorse economiche disponibili.
-3. EFFETTUARE IL CAMBIAMENTO: Solo alla fine, compilare il modulo / chiudere.
+  // Framework di riferimento (estratto dai PDF) iniettato come MODELLO
+  // a cui l'AI si attiene per reagire in modo coerente con il modello formativo.
+  const catId = getScenarioCategory(sc.id);
+  const fw = getRelevantFramework(sc.id, catId);
+  const fwBlock = `\n\n=== MODELLO DI RIFERIMENTO (PDF formativi) ===
+I tuoi comportamenti, le tue reazioni e il tuo grado di apertura/chiusura
+devono essere COERENTI con questo modello. Non citare mai il modello
+direttamente: ti serve solo per reagire in modo realistico al modo in cui
+l'utente applica (o non applica) le tecniche descritte.\n${fw}\n=== FINE MODELLO ===\n`;
 
-IMPORTANTE: Tu sei un cliente assicurativo reale. Reagisci in modo naturale alle domande del consulente. Se il consulente segue bene il processo (evento → quantificazione € → area emotiva → rassicurazione → soluzione), ti apri progressivamente. Se salta passaggi o va troppo veloce alla chiusura, resisti.`;
-    
-    return `Sei ${role} in un roleplay di vendita assicurativa. Contesto: ${brief}\nPersonalità base: ${personality}\n${ingaggioFramework}\nRegole: personaggio, italiano, breve, realistico. Non dare consigli. Dopo 10 scambi cerca di concludere naturalmente.\nIndicazioni sceniche: metti tra asterischi *così* le espressioni facciali e i gesti. Usa le espressioni del volto che corrispondono alla tua emozione:\n- Gioia: zampe di gallina agli occhi, angoli bocca sollevati\n- Sorpresa: sopracciglia sollevate, mascella abbassata, occhi spalancati\n- Rabbia: sopracciglia abbassate e ravvicinate, sguardo fisso, narici dilatate\n- Disgusto: naso arricciato, labbro superiore sollevato\n- Paura: sopracciglia sollevate e ravvicinate, bocca aperta, palpebre sollevate\n- Tristezza: angoli interni sopracciglia sollevati, angoli bocca in giù, palpebre allentate${diffMod(d)}`;
+  if (isIngaggio) {
+    const ingaggioRules = `\nRUOLO DEL CLIENTE NEL PROCESSO DECISIONALE
+Il processo a 3 fasi che il consulente deve guidare è descritto nel modello sopra
+(sezione B di "Ingaggio emotivo"). Tu sei il CLIENTE: reagisci in modo naturale.
+- Se il consulente segue la sequenza (evento → quantificazione € → area emotiva →
+  rassicurazione → soluzione) e usa la TECNICA CORRETTA per la tua resistenza
+  (sezione E del modello), ti apri progressivamente.
+- Se salta passaggi, va dritto alla vendita o usa la tecnica sbagliata per la
+  tua resistenza, ti chiudi e resisti in modo coerente con la tua emozione.
+NON dare consigli. NON spiegare cosa dovrebbe fare. Reagisci e basta.`;
+
+    return `Sei ${role} in un roleplay di vendita assicurativa.
+Contesto: ${brief}
+Personalità base: ${personality}
+${fwBlock}${ingaggioRules}
+Regole: resta nel personaggio, italiano, frasi brevi e realistiche. Dopo circa
+10 scambi cerca di concludere naturalmente (senza forzature).
+Indicazioni sceniche: metti tra asterischi *così* le espressioni facciali e i
+gesti. Usa coerentemente le espressioni del volto descritte nella sezione A
+del modello (gioia, sorpresa, rabbia, disgusto, paura, tristezza) in base
+all'emozione che provi in ogni momento.${diffMod(d)}`;
   }
-  
-  return `Sei ${role} in un roleplay. Contesto: ${brief}\nPersonalità: ${personality}\nRegole: personaggio, italiano, breve. Non dare consigli. Dopo 8 scambi concludi.\nIndicazioni sceniche: quando vuoi descrivere azioni, gesti, espressioni o atmosfera (es. sospira, si alza, guarda l'orologio, incrocia le braccia), mettile tra asterischi *così*. Queste parti verranno lette da una voce fuori campo. Usale con moderazione per arricchire la scena.${diffMod(d)}`;
+
+  return `Sei ${role} in un roleplay.
+Contesto: ${brief}
+Personalità: ${personality}
+${fwBlock}
+Regole: resta nel personaggio, italiano, frasi brevi e realistiche. Non dare
+consigli al tuo interlocutore: ti serve solo reagire in modo coerente con il
+modello sopra. Se l'utente applica bene le tecniche del modello (es. feedback
+circoscritto al fatto, ascolto attivo, riconoscimento dell'intenzione positiva,
+gestione corretta dell'emozione), reagisci aprendoti. Se le applica male
+(giudizio sulla persona, soluzioni imposte senza ascoltare, minimizzazione
+dell'emozione), reagisci con resistenza coerente. Dopo circa 8 scambi concludi.
+Indicazioni sceniche: quando vuoi descrivere azioni, gesti, espressioni o
+atmosfera (es. sospira, si alza, guarda l'orologio, incrocia le braccia),
+mettile tra asterischi *così*. Queste parti verranno lette da una voce fuori
+campo. Le espressioni del volto seguono la sezione A del modello.${diffMod(d)}`;
 }
 function getScenarioCategory(scId) {
   for (const cat of CATEGORIES) {
@@ -195,10 +393,27 @@ function evalPr(sc, convo, d) {
   const diffLabel = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(x => x.id === d)?.label || d;
   const tipsBlock = sc.tips?.length ? `\nTIPS DELLO SCENARIO (l'utente aveva accesso a questi suggerimenti):\n${sc.tips.map((t, i) => `${i + 1}. ${t}`).join("\n")}` : "";
 
+  // Framework di riferimento (estratto dai PDF di formazione) — fonte unica
+  // su cui il valutatore deve basare il giudizio. Iniettato in CIMA al prompt
+  // di valutazione affinché ogni feedback sia ancorato al modello formativo.
+  const fw = getRelevantFramework(sc.id, catId);
+  const frameworkHeader = `=== MODELLO DI RIFERIMENTO PER LA VALUTAZIONE (PDF formativi) ===
+Le tecniche corrette, la sequenza dell'intervento, le tipologie di feedback,
+la gestione delle resistenze emotive e il riconoscimento delle espressioni del
+volto sono definite UNICAMENTE da questo modello. Ogni giudizio, suggerimento
+e tecnica nel feedback finale DEVE essere ancorato a questo modello, citandone
+le sezioni quando rilevante.
+
+${fw}
+
+=== FINE MODELLO ===
+
+`;
+
   // ═══ INGAGGIO EMOTIVO (ig1, ig2, ig3) ═══
   if (isIngaggio) {
     const resistenzaLabel = DIFF_INGAGGIO.find(x => x.id === d)?.label || d;
-    return `Executive coach specializzato in vendita assicurativa e ingaggio emotivo del cliente. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in vendita assicurativa e ingaggio emotivo del cliente. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — PROCESSO DECISIONALE DEL CLIENTE:
 Il consulente doveva guidare il cliente attraverso 3 fasi sequenziali:
@@ -259,7 +474,7 @@ ${EVAL_JSON_SCHEMA}`;
   // ═══ FEEDBACK (fb1, fb2) ═══
   if (catId === "feedback") {
     const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
-    return `Executive coach specializzato in gestione del feedback e comunicazione manageriale. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in gestione del feedback e comunicazione manageriale. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — GESTIONE DEL FEEDBACK:
 
@@ -320,7 +535,7 @@ ${EVAL_JSON_SCHEMA}`;
   // ═══ CONVERSAZIONI DIFFICILI (dc1, dc2) ═══
   if (catId === "difficult") {
     const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
-    return `Executive coach specializzato in gestione di conversazioni difficili e comunicazione in situazioni critiche. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in gestione di conversazioni difficili e comunicazione in situazioni critiche. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — CONVERSAZIONI DIFFICILI:
 
@@ -371,7 +586,7 @@ ${EVAL_JSON_SCHEMA}`;
 
   // ═══ FISSARE APPUNTAMENTI (sc1, sc2, sc3, sc4) ═══
   if (catId === "sales") {
-    return `Executive coach specializzato in vendita assicurativa e tecniche di fissazione appuntamenti. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in vendita assicurativa e tecniche di fissazione appuntamenti. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — FISSARE APPUNTAMENTI:
 
@@ -417,7 +632,7 @@ ${EVAL_JSON_SCHEMA}`;
   // ═══ DELEGA (ld1, ld2) ═══
   if (sc.id === "ld1" || sc.id === "ld2") {
     const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
-    return `Executive coach specializzato in delega efficace e leadership situazionale. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in delega efficace e leadership situazionale. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — GESTIRE LA DELEGA:
 
@@ -471,7 +686,7 @@ ${EVAL_JSON_SCHEMA}`;
   if (INF_SCENARIOS.includes(sc.id)) {
     const infVar = getInfVariant(d);
     const infLabel = infVar?.label || diffLabel;
-    return `Executive coach specializzato in influenzamento e comunicazione persuasiva. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in influenzamento e comunicazione persuasiva. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — INFLUENZARE UN COMPORTAMENTO:
 
@@ -526,7 +741,7 @@ ${EVAL_JSON_SCHEMA}`;
   // ═══ COACHING (co1, co2, co3) ═══
   if (catId === "coaching") {
     const slLabel = DIFF_SL.find(x => x.id === d)?.label || diffLabel;
-    return `Executive coach specializzato in coaching manageriale e sviluppo dei collaboratori. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in coaching manageriale e sviluppo dei collaboratori. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — COACHING E AFFIANCAMENTO:
 
@@ -596,7 +811,7 @@ ${EVAL_JSON_SCHEMA}`;
     };
     const emoInfo = emotionMap[sc.id] || { emotion: "Emozione complessa", techniques: "Applicare i principi generali del framework emotivo." };
 
-    return `Executive coach specializzato in intelligenza emotiva e gestione delle emozioni nel contesto lavorativo. Valuta questo roleplay.
+    return `${frameworkHeader}Executive coach specializzato in intelligenza emotiva e gestione delle emozioni nel contesto lavorativo. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO — GOVERNARE GLI ASPETTI EMOTIVI:
 
@@ -653,7 +868,7 @@ ${EVAL_JSON_SCHEMA}`;
 
   // ═══ FALLBACK GENERICO MIGLIORATO ═══
   const slLabel = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(x => x.id === d)?.label || d;
-  return `Executive coach con esperienza in comunicazione manageriale, feedback e gestione delle relazioni professionali. Valuta questo roleplay.
+  return `${frameworkHeader}Executive coach con esperienza in comunicazione manageriale, feedback e gestione delle relazioni professionali. Valuta questo roleplay.
 
 FRAMEWORK DI RIFERIMENTO GENERALE:
 
@@ -1037,7 +1252,7 @@ export default function App() {
     const prompt = evalPr(selectedScenario, convoRef.current, difficulty);
     let parsed = null;
     for (let a = 0; a < 3 && !parsed; a++) {
-      const raw = await callAI([{ role: "user", content: prompt }], "Sei un executive coach esperto. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo il JSON. Nessun markdown. Inizia con { e finisci con }. Tutti i campi sono obbligatori.", 2048);
+      const raw = await callAI([{ role: "user", content: prompt }], "Sei un executive coach esperto. Basa OGNI giudizio, commento, frase migliorativa e tecnica suggerita ESCLUSIVAMENTE sul MODELLO DI RIFERIMENTO fornito nel prompt (estratto dai PDF di formazione su feedback, delega e ingaggio emotivo). Non inventare tecniche fuori dal modello. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo il JSON. Nessun markdown. Inizia con { e finisci con }. Tutti i campi sono obbligatori.", 2048);
       console.log(`[evalReport] attempt ${a + 1}, raw length: ${raw?.length}, raw preview:`, raw?.substring(0, 200));
       try { const c = raw.replace(/```json|```/g, "").trim(); const s = c.indexOf("{"), e = c.lastIndexOf("}"); if (s >= 0 && e > s) parsed = JSON.parse(c.slice(s, e + 1)); } catch (err) { console.warn(`[evalReport] JSON parse failed attempt ${a + 1}:`, err.message); }
     }
