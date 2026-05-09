@@ -932,10 +932,10 @@ function SectionPermissions({ user, onUpdate }) {
   const initSections = () =>
     user.allowed_sections ? [...user.allowed_sections] : ALL_SECTIONS.map(s => s.id);
 
-  const [sections, setSections] = React.useState(initSections);
-  const [status, setStatus] = React.useState(""); // "" | "saving" | "saved"
+  const [sections, setSections] = useState(initSections);
+  const [status, setStatus] = useState(""); // "" | "saving" | "saved"
 
-  React.useEffect(() => {
+  useEffect(() => {
     setSections(initSections());
   }, [user.id, user.allowed_sections]);
 
