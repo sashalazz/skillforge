@@ -1183,6 +1183,13 @@ export default function App() {
     if (res.success) setAdminUserStats(res.stats || {});
   };
 
+  // ─── Carica stats quando si entra nel pannello admin ─────
+  useEffect(() => {
+    if (screen === "admin" && token) {
+      loadAdminUserStats();
+    }
+  }, [screen, token]);
+
   // ─── AI ───────────────────────────────────────────────────
   const callAI = async (messages, system, maxTok) => {
     try {
