@@ -1047,12 +1047,12 @@ export default function App() {
   const [configLimit, setConfigLimit] = useState("5");
   const [adminUserStats, setAdminUserStats] = useState({});
   const [expandedUser, setExpandedUser] = useState(null);
-  const [sessionStartTime, setSessionStartTime] = useState(null);
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
   const audioRef = useRef(null);
   const convoRef = useRef([]);
+  const sessionStartRef = useRef(null);
 
   useEffect(() => { convoRef.current = conversation; }, [conversation]);
 
@@ -1340,7 +1340,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
       const bs = [6, 7, 5, 8, 6];
       parsed = { overall_score: 6, summary: "Buon impegno, serve più struttura.", scores: selectedScenario.eval.map((c, i) => ({ criterion: c, score: bs[i % 5], comment: `Lavora su "${c.toLowerCase()}".` })), strengths: ["Volontà", "Tono appropriato", "Focus"], improvements: ["Più domande aperte", "Più esempi", "Più struttura"], key_moment: "Il momento iniziale ha impostato il tono.", mistake_to_avoid: "Non saltare subito alla soluzione.", better_phrase: "'Devi migliorare' → 'Come vedi la situazione?'", academy_tip: "Regola 70/30: ascolta 70%, parla 30%." };
     }
-    await authCall({ action: "save_score", scenarioId: selectedScenario.id, difficulty, score: parsed.overall_score, duration_seconds: sessionStartTime ? Math.round((Date.now() - sessionStartTime) / 1000) : null }, token);
+    await authCall({ action: "save_score", scenarioId: selectedScenario.id, difficulty, score: parsed.overall_score, duration_seconds: sessionStartRef.current ? Math.round((Date.now() - sessionStartRef.current) / 1000) : null }, token);
     checkDailyLimit();
     setReport(parsed); setIsGeneratingReport(false);
   }, [selectedScenario, difficulty, nav, token]);
@@ -1753,7 +1753,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
             </div>
           ) : (
             <div style={{ marginTop: "20px" }}>
-              <button style={{ ...S.btn(C.accent, true) }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); setSessionStartTime(Date.now()); nav("roleplay"); }}>🎭 Inizia</button>
+              <button style={{ ...S.btn(C.accent, true) }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); sessionStartRef.current = Date.now(); nav("roleplay"); }}>🎭 Inizia</button>
               <div style={{ textAlign: "center", fontSize: "12px", color: C.muted, marginTop: "8px" }}>{dailyUsed}/{dailyLimit} sessioni usate oggi · Max {MAX_TURNS} scambi per sessione</div>
             </div>
           )}
@@ -1868,7 +1868,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
                 <div style={{ fontSize: "14px", color: "rgba(42,26,14,0.7)", lineHeight: 1.7, fontStyle: "italic" }}>"{report.academy_tip}"</div>
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                <button style={{ ...S.btn(C.accent), flex: 1 }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); setSessionStartTime(Date.now()); nav("roleplay"); }}>🔄 Riprova</button>
+                <button style={{ ...S.btn(C.accent), flex: 1 }} onClick={() => { setConversation([]); setLastAiText(""); setTurnCount(0); sessionStartRef.current = Date.now(); nav("roleplay"); }}>🔄 Riprova</button>
                 <button style={{ ...S.btnO, flex: 1 }} onClick={() => { setShowLB(true); loadLB(); }}>🏆</button>
                 <button style={{ ...S.btnO, flex: 1 }} onClick={restart}>🏠 Home</button>
               </div>
