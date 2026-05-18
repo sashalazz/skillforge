@@ -1241,6 +1241,19 @@ export default function App() {
     const NARRATOR_PITCH = 0.5;
     const NARRATOR_RATE = 0.78;
 
+    // ─── Voice selection by character gender ─────────────────
+    // Voce maschile italiana (ElevenLabs) per personaggi uomini.
+    // Per i personaggi femminili / neutri si usa la voce di default
+    // configurata lato server (process.env.ELEVENLABS_VOICE_ID).
+    const MALE_VOICE_ID = "mCXKh2XQAfLEHpvKU60w";
+    const MALE_CHARACTERS = new Set([
+      "Alessandro", "Andrea", "Davide", "Fabio", "Luca", "Marco",
+      "Massimo", "Paolo", "Riccardo", "Roberto", "Stefano",
+      "Dott. Martini", "Sig. Bianchi", "Sig. Ferrara", "Sig. Neri", "Sig. Verdi",
+    ]);
+    const isMaleCharacter = selectedScenario && MALE_CHARACTERS.has(selectedScenario.role_ai);
+    const dialogueVoiceId = isMaleCharacter ? MALE_VOICE_ID : undefined;
+
     // ElevenLabs TTS for dialogue parts
     const speakElevenLabs = (dialogueText) => {
       return new Promise(async (resolve) => {
@@ -1248,7 +1261,11 @@ export default function App() {
           const r = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: dialogueText }),
+            body: JSON.stringify(
+              dialogueVoiceId
+                ? { text: dialogueText, voice_id: dialogueVoiceId }
+                : { text: dialogueText }
+            ),
           });
           if (!r.ok) throw new Error("TTS request failed");
           const blob = await r.blob();
@@ -1303,18 +1320,14 @@ export default function App() {
       }
       setIsSpeaking(false);
     })();
-  }, []);
+  }, [selectedScenario]);
 
   const startListening = useCallback(() => {
-    if (!speechSupported) {
-      alert("Il tuo browser non supporta il riconoscimento vocale. Usa Chrome/Edge su desktop o Safari su iOS recente, oppure passa alla modalità Testo.");
-      return;
-    }
+    if (!speechSupported) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR(); rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = true; let f = "";
     rec.onresult = e => { let i = ""; for (let j = e.resultIndex; j < e.results.length; j++) { if (e.results[j].isFinal) f += e.results[j][0].transcript + " "; else i += e.results[j][0].transcript; } setCurrentTranscript(f + i); };
-    rec.onerror = (e) => { setIsListening(false); if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Permesso microfono negato. Abilitalo nelle impostazioni del browser e riprova."); };
-    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false); rec.onend = () => setIsListening(false);
     recognitionRef.current = rec; rec.start(); setIsListening(true); setCurrentTranscript("");
   }, [speechSupported]);
   const stopListening = useCallback(() => { if (recognitionRef.current) recognitionRef.current.stop(); setIsListening(false); }, []);
@@ -1793,7 +1806,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
           </div>
           <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 0 4px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
-              <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border, opacity: speechSupported ? 1 : 0.6 }} onClick={() => setInputMode("voice")} title={speechSupported ? "Modalità vocale" : "Il tuo browser non supporta il riconoscimento vocale — meglio Chrome/Edge desktop o Safari iOS recente"}>🎤 Voce</button>
+              {speechSupported && <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border }} onClick={() => setInputMode("voice")}>🎤 Voce</button>}
               <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "text" ? `${C.accent}20` : "transparent", borderColor: inputMode === "text" ? C.accent : C.border }} onClick={() => setInputMode("text")}>⌨️ Testo</button>
             </div>
             {inputMode === "voice" ? (
