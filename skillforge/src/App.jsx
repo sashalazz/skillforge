@@ -1047,65 +1047,14 @@ export default function App() {
   const [configLimit, setConfigLimit] = useState("5");
   const [adminUserStats, setAdminUserStats] = useState({});
   const [expandedUser, setExpandedUser] = useState(null);
-  // ─── Viewport reattivo (rotazione + resize) ───────────────
-  // window.innerWidth da solo non si aggiorna sul re-render: serve uno state.
-  const [viewport, setViewport] = useState(() => ({
-    w: typeof window !== "undefined" ? window.innerWidth : 1024,
-    h: typeof window !== "undefined" ? window.innerHeight : 768,
-  }));
-  const isMobile = viewport.w <= 600;
-  const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const MAX_TURNS = 20;
   const recognitionRef = useRef(null);
   const synthRef = useRef(null);
   const audioRef = useRef(null);
-  const audioUnlockedRef = useRef(false);
   const convoRef = useRef([]);
   const sessionStartRef = useRef(null);
 
   useEffect(() => { convoRef.current = conversation; }, [conversation]);
-
-  // ─── Listener resize/orientation per viewport reattivo ────
-  useEffect(() => {
-    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
-  }, []);
-
-  // ─── Audio unlock per iOS ─────────────────────────────────
-  // iOS Safari blocca la riproduzione audio finché non c'è un'interazione utente.
-  // Al primo tap "scaldiamo" il sistema audio così le risposte vocali partono subito.
-  useEffect(() => {
-    const unlock = () => {
-      if (audioUnlockedRef.current) return;
-      try {
-        // 1) Sblocca SpeechSynthesis (iOS lo richiede prima del primo .speak)
-        if (window.speechSynthesis) {
-          const u = new SpeechSynthesisUtterance("");
-          u.volume = 0;
-          window.speechSynthesis.speak(u);
-        }
-        // 2) Sblocca <audio> con un blob silenzioso
-        const silentMp3 = "data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQxAADB8AhSmxhIIEVCSiJrDCQBTcu3UrAIwUdkRgQbFAZC1CQEwTJ9mjRvBA4UOLD8nKVOWfh+UlK3z/177OXrfOdKl7pyn3Xf//WreyTRUoAWgBgkOAGbZHBgG1OF6zM82DWbZaUmMBptgQhGjsyYqc9ae9XFz280948NMBWInljyzsNRFLPWdnZGWrddDsjK1unuSrVN9jJsK8KuQtQCtMBjCEtImISdNKJOopIpBFpNSMbIHCSRpRR5iakjTiyzLhchUUBwCgyKiweBv/7UsQbg8isOSDOlxOAAAA0gAAABEVFGmgqK////9bP/6XCykxBTUUzLjk5LjVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-        const a = new Audio(silentMp3);
-        a.volume = 0;
-        a.play().catch(() => {});
-        audioUnlockedRef.current = true;
-      } catch (e) { /* fail silenzioso */ }
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("click", unlock);
-    };
-    window.addEventListener("touchstart", unlock, { once: true, passive: true });
-    window.addEventListener("click", unlock, { once: true });
-    return () => {
-      window.removeEventListener("touchstart", unlock);
-      window.removeEventListener("click", unlock);
-    };
-  }, []);
 
   // ─── Init: check saved token ──────────────────────────────
   useEffect(() => {
@@ -1305,10 +1254,6 @@ export default function App() {
           const blob = await r.blob();
           const url = URL.createObjectURL(blob);
           const audio = new Audio(url);
-          // Su iOS l'audio deve essere "inline" altrimenti apre il player fullscreen
-          audio.setAttribute("playsinline", "true");
-          audio.setAttribute("webkit-playsinline", "true");
-          audio.preload = "auto";
           audioRef.current = audio;
           audio.onplay = () => setIsSpeaking(true);
           audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
@@ -1361,30 +1306,17 @@ export default function App() {
   }, []);
 
   const startListening = useCallback(() => {
-    if (!speechSupported) return;
+    if (!speechSupported) {
+      alert("Il tuo browser non supporta il riconoscimento vocale. Usa Chrome/Edge su desktop o Safari su iOS recente, oppure passa alla modalità Testo.");
+      return;
+    }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = "it-IT";
-    rec.interimResults = true;
-    // Su iOS Safari continuous=true causa interruzioni e perdita di risultati.
-    // Usiamo false su iOS e true altrove (Android Chrome lo supporta bene).
-    rec.continuous = !isIOS;
-    let f = "";
-    rec.onresult = e => {
-      let i = "";
-      for (let j = e.resultIndex; j < e.results.length; j++) {
-        if (e.results[j].isFinal) f += e.results[j][0].transcript + " ";
-        else i += e.results[j][0].transcript;
-      }
-      setCurrentTranscript(f + i);
-    };
-    rec.onerror = () => setIsListening(false);
+    const rec = new SR(); rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = true; let f = "";
+    rec.onresult = e => { let i = ""; for (let j = e.resultIndex; j < e.results.length; j++) { if (e.results[j].isFinal) f += e.results[j][0].transcript + " "; else i += e.results[j][0].transcript; } setCurrentTranscript(f + i); };
+    rec.onerror = (e) => { setIsListening(false); if (e.error === "not-allowed" || e.error === "service-not-allowed") alert("Permesso microfono negato. Abilitalo nelle impostazioni del browser e riprova."); };
     rec.onend = () => setIsListening(false);
-    recognitionRef.current = rec;
-    try { rec.start(); } catch (err) { console.warn("Speech start failed:", err); }
-    setIsListening(true);
-    setCurrentTranscript("");
-  }, [speechSupported, isIOS]);
+    recognitionRef.current = rec; rec.start(); setIsListening(true); setCurrentTranscript("");
+  }, [speechSupported]);
   const stopListening = useCallback(() => { if (recognitionRef.current) recognitionRef.current.stop(); setIsListening(false); }, []);
 
   const genReportRef = useRef(null);
@@ -1455,63 +1387,23 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
   const restart = () => { nav("home", () => { setConversation([]); setReport(null); setSelectedScenario(null); setSelectedCategory(null); setCurrentTranscript(""); setLastAiText(""); setTurnCount(0); setDifficulty("medium"); }); };
 
   // ─── STYLES ───────────────────────────────────────────────
-  // Nota: usiamo "100dvh" (dynamic viewport height) con fallback su "100vh"
-  // per evitare il classico bug iOS in cui la barra del browser taglia il contenuto.
   const S = {
-    app: { minHeight: "100vh", minHeight: "100dvh", background: `radial-gradient(ellipse 80% 60% at 30% 20%, #EDE0D0 0%, ${C.bg2} 45%, ${C.bg1} 100%)`, fontFamily: "'DM Sans', sans-serif", color: C.text },
+    app: { minHeight: "100vh", background: `radial-gradient(ellipse 80% 60% at 30% 20%, #EDE0D0 0%, ${C.bg2} 45%, ${C.bg1} 100%)`, fontFamily: "'DM Sans', sans-serif", color: C.text },
     wrap: { maxWidth: "900px", margin: "0 auto", padding: "20px", position: "relative", zIndex: 1, opacity: animateIn ? 1 : 0, transform: animateIn ? "translateY(0)" : "translateY(20px)", transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)" },
     logo: { fontSize: "11px", letterSpacing: "6px", textTransform: "uppercase", color: C.muted },
-    h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, ${C.text} 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
-    // I bottoni hanno padding generoso (>= 44px effettivi) per tap target mobile
-    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto", minHeight: "44px" }),
-    btnO: { background: "transparent", color: C.accent, border: `1px solid ${C.accent}55`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'", minHeight: "44px" },
+    h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, ${C.text} 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto" }),
+    btnO: { background: "transparent", color: C.accent, border: `1px solid ${C.accent}55`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'" },
     chip: (c) => ({ display: "inline-block", background: c + "20", color: c, padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }),
     glass: { background: "rgba(255,248,240,0.75)", borderRadius: "16px", padding: "24px", border: `1px solid ${C.border}` },
-    // La grid usa auto-fill: già responsiva. Il CSS .sf-grid lo forza a 1 colonna sotto 600px.
     grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "14px", marginTop: "24px" },
-    // Input: 16px obbligatorio per evitare il forced-zoom su iOS Safari al focus
-    input: { width: "100%", background: "rgba(255,255,255,0.92)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "16px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
+    input: { width: "100%", background: "rgba(255,255,255,0.92)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
   };
 
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;background:#FAF7F3;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overscroll-behavior-y:none;text-size-adjust:100%;-webkit-text-size-adjust:100%}
-    body{touch-action:manipulation}
-    /* Input/textarea: 16px minimo per evitare lo zoom automatico di Safari iOS al focus */
-    input,textarea,select,button{font-family:inherit;-webkit-appearance:none;appearance:none}
-    input[type="text"],input[type="email"],input[type="password"],input[type="number"],textarea{font-size:16px !important}
-    /* Scroll fluido stile iOS dentro i contenitori scrollabili */
-    .sf-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(42,26,14,0.08);border-radius:3px}
-    /* Tap target minimi: 44px (Apple HIG) per qualunque bottone */
-    button{min-height:44px;touch-action:manipulation;cursor:pointer}
-    /* Disabilita hover residui sui device touch (evita stati "stuck") */
-    @media (hover:none){
-      .sf-card:hover{transform:none !important;border-color:inherit !important}
-    }
-    /* Safe-area per il notch e la home bar di iPhone */
-    .sf-app{
-      padding-top:env(safe-area-inset-top);
-      padding-bottom:env(safe-area-inset-bottom);
-      padding-left:env(safe-area-inset-left);
-      padding-right:env(safe-area-inset-right);
-    }
-    /* Mobile breakpoint: schermi <= 600px */
-    @media (max-width:600px){
-      .sf-wrap{padding:14px !important}
-      .sf-grid{grid-template-columns:1fr !important;gap:10px !important}
-      .sf-grid-2{grid-template-columns:1fr 1fr !important}
-      .sf-grid-admin{grid-template-columns:1fr 1fr !important}
-      .sf-hide-mobile{display:none !important}
-      .sf-row-wrap{flex-wrap:wrap !important;gap:8px !important}
-      .sf-table-compact{font-size:11px !important}
-      .sf-table-compact td,.sf-table-compact th{padding:8px 6px !important}
-    }
-    /* Riduzione movimento per chi lo preferisce (accessibilità) */
-    @media (prefers-reduced-motion:reduce){
-      *{animation-duration:0.01ms !important;transition-duration:0.01ms !important}
-    }
+    *{box-sizing:border-box;margin:0;padding:0}body{margin:0;background:#FAF7F3;}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(42,26,14,0.08);border-radius:3px}
     @keyframes pulseGlow{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
     @keyframes blink{0%,40%,100%{ry:11}45%,55%{ry:1}}
     @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
@@ -1521,14 +1413,14 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
 
   // ─── LEADERBOARD MODAL ────────────────────────────────────
   const LBModal = () => (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "12px", paddingTop: "max(12px, env(safe-area-inset-top))", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }} onClick={() => setShowLB(false)}>
-      <div className="sf-scroll" style={{ ...S.glass, maxWidth: "520px", width: "100%", maxHeight: "85dvh", overflowY: "auto", background: C.bg2, border: `1px solid ${C.accent}33`, padding: isMobile ? "16px" : "24px" }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }} onClick={() => setShowLB(false)}>
+      <div style={{ ...S.glass, maxWidth: "520px", width: "100%", maxHeight: "80vh", overflowY: "auto", background: C.bg2, border: `1px solid ${C.accent}33` }} onClick={e => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div style={{ fontSize: "20px", fontWeight: 700 }}>🏆 Leaderboard</div>
-          <button style={{ ...S.btnO, padding: "6px 14px", fontSize: "12px", minHeight: "36px" }} onClick={() => setShowLB(false)}>✕</button>
+          <button style={{ ...S.btnO, padding: "6px 14px", fontSize: "12px" }} onClick={() => setShowLB(false)}>✕</button>
         </div>
         {leaderboard.length === 0 ? <div style={{ textAlign: "center", color: C.muted, padding: "40px 0" }}>Nessun risultato ancora.</div> : (
-          <table className="sf-table-compact" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr>{["#", "Nome", "Media", "Sessioni"].map(h => <th key={h} style={{ textAlign: h === "#" || h === "Nome" ? "left" : "center", padding: "8px", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, borderBottom: `1px solid ${C.border}` }}>{h}</th>)}</tr></thead>
             <tbody>{leaderboard.map((r, i) => (
               <tr key={r.userId} style={{ background: r.userId === user?.id ? `${C.accent}12` : "transparent" }}>
@@ -1545,13 +1437,13 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
   );
 
   // ═══ LOADING ═══
-  if (screen === "loading") return (<div className="sf-app" style={S.app}><style>{CSS}</style><div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100dvh" }}><div style={{ width: "40px", height: "40px", border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 1s linear infinite" }} /></div></div>);
+  if (screen === "loading") return (<div style={S.app}><style>{CSS}</style><div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}><div style={{ width: "40px", height: "40px", border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 1s linear infinite" }} /></div></div>);
 
   // ═══ AUTH ═══
   if (screen === "auth") {
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
-        <div className="sf-wrap" style={{ ...S.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100dvh", textAlign: "center" }}>
+      <div style={S.app}><style>{CSS}</style>
+        <div style={{ ...S.wrap, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", textAlign: "center" }}>
           <div style={{ marginBottom: "24px", display: "flex", justifyContent: "center" }}>
             <img src={LOGO_CLAIM} alt="Accendi – Skill Forge" style={{ width: "200px", height: "auto" }} />
           </div>
@@ -1570,10 +1462,10 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
             </div>
 
             {authScreen === "register" && (
-              <input type="text" placeholder="Il tuo nome" value={formName} onChange={e => setFormName(e.target.value)} autoComplete="name" style={S.input} />
+              <input type="text" placeholder="Il tuo nome" value={formName} onChange={e => setFormName(e.target.value)} style={S.input} />
             )}
-            <input type="email" placeholder="Email" value={formEmail} onChange={e => setFormEmail(e.target.value)} inputMode="email" autoComplete="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} style={S.input} />
-            <input type="password" placeholder="Password" value={formPass} onChange={e => setFormPass(e.target.value)} autoComplete={authScreen === "login" ? "current-password" : "new-password"} style={S.input}
+            <input type="email" placeholder="Email" value={formEmail} onChange={e => setFormEmail(e.target.value)} style={S.input} />
+            <input type="password" placeholder="Password" value={formPass} onChange={e => setFormPass(e.target.value)} style={S.input}
               onKeyDown={e => { if (e.key === "Enter") authScreen === "login" ? handleLogin() : handleRegister(); }} />
 
             {authError && <div style={{ color: C.danger, fontSize: "13px", marginBottom: "12px" }}>{authError}</div>}
@@ -1597,8 +1489,8 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
   // ═══ ADMIN PANEL ═══
   if (screen === "admin") {
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
-        <div className="sf-wrap" style={S.wrap}>
+      <div style={S.app}><style>{CSS}</style>
+        <div style={S.wrap}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
               <img src={LOGO_PICCOLO} alt="Skill Forge" style={{ height: "34px", width: "auto" }} />
@@ -1663,7 +1555,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
                   </div>
 
                   {/* ── STATS ROW ── */}
-                  <div className="sf-grid-admin" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: `1px solid ${C.border}` }}>
                     <div style={{ background: "rgba(42,26,14,0.03)", borderRadius: "10px", padding: "10px", textAlign: "center" }}>
                       <div style={{ fontSize: "10px", letterSpacing: "1px", textTransform: "uppercase", color: C.muted, marginBottom: "4px" }}>Ultimo accesso</div>
                       <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{uStats?.lastAccess ? new Date(uStats.lastAccess).toLocaleDateString("it", { day: "2-digit", month: "short", year: "numeric" }) : "Mai"}</div>
@@ -1694,8 +1586,8 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
 
                   {/* ── EXPANDED SCENARIO LIST ── */}
                   {isExpanded && uStats?.scenarios && (
-                    <div className="sf-scroll" style={{ marginTop: "8px", maxHeight: "300px", overflowY: "auto", overflowX: "auto" }}>
-                      <table className="sf-table-compact" style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px", minWidth: "480px" }}>
+                    <div style={{ marginTop: "8px", maxHeight: "300px", overflowY: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
                         <thead>
                           <tr>
                             {["Data", "Scenario", "Difficoltà", "Durata", "Punteggio"].map(h => (
@@ -1756,9 +1648,9 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
   // ═══ HOME ═══
   if (screen === "home") {
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
+      <div style={S.app}><style>{CSS}</style>
         {showLB && <LBModal />}
-        <div className="sf-wrap" style={S.wrap}>
+        <div style={S.wrap}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
             <div style={{ fontSize: "13px", color: C.muted }}>Ciao, <span style={{ color: C.accent, fontWeight: 600 }}>{user?.name}</span></div>
             <div style={{ display: "flex", gap: "8px" }}>
@@ -1772,12 +1664,12 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
             <h1 style={{ ...S.h1, fontSize: "clamp(24px,4.5vw,38px)", marginTop: "4px" }}>Allena le tue<br />Soft Skills</h1>
           </div>
           {!selectedCategory ? (
-            <div className="sf-grid" style={S.grid}>
+            <div style={S.grid}>
               {(user?.allowedSections
                 ? CATEGORIES.filter(c => user.allowedSections.includes(c.id))
                 : CATEGORIES
               ).map(cat => (
-                <div key={cat.id} className="sf-card" style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
+                <div key={cat.id} style={{ ...S.glass, cursor: "pointer", transition: "all 0.3s" }} onClick={() => setSelectedCategory(cat)}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = cat.color + "44"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
                   <div style={{ fontSize: "28px", marginBottom: "8px" }}>{cat.icon}</div>
@@ -1795,7 +1687,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
                 <div><div style={{ fontSize: "20px", fontWeight: 700 }}>{selectedCategory.label}</div><div style={{ fontSize: "13px", color: C.muted }}>{selectedCategory.description}</div></div>
               </div>
               {selectedCategory.scenarios.map(sc => (
-                <div key={sc.id} className="sf-card" style={{ ...S.glass, cursor: "pointer", marginBottom: "10px", transition: "all 0.3s" }}
+                <div key={sc.id} style={{ ...S.glass, cursor: "pointer", marginBottom: "10px", transition: "all 0.3s" }}
                   onClick={() => { setSelectedScenario(sc); setDifficulty(getDefaultDiff(selectedCategory?.id, sc.id)); checkDailyLimit(); nav("scenario"); }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = selectedCategory.color + "44"; e.currentTarget.style.transform = "translateX(6px)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.transform = "none"; }}>
@@ -1820,8 +1712,8 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
     const dispRoleAi = infVar ? infVar.role_ai_full : selectedScenario.role_ai_full;
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
-        <div className="sf-wrap" style={S.wrap}>
+      <div style={S.app}><style>{CSS}</style>
+        <div style={S.wrap}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "18px" }}>
             <button style={S.btnO} onClick={() => nav("home", () => setSelectedScenario(null))}>← Indietro</button>
             <img src={LOGO_PICCOLO} alt="Skill Forge" style={{ height: "30px", width: "auto" }} />
@@ -1882,17 +1774,17 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     const dispRoleAiShort = infVar ? infVar.role_ai : selectedScenario.role_ai;
     const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
-        <div className="sf-wrap" style={{ ...S.wrap, display: "flex", flexDirection: "column", height: "100dvh", maxHeight: "100dvh", padding: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", padding: "6px 0 10px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
-              <img src={LOGO_PICCOLO} alt="" style={{ height: "26px", width: "auto", flexShrink: 0 }} />
-              <div style={{ minWidth: 0, overflow: "hidden" }}><div style={{ fontSize: "15px", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedScenario.title}</div><div style={{ fontSize: "12px", color: C.muted }}>Turno {turnCount}/{MAX_TURNS} · {di?.icon} {di?.label}</div></div>
+      <div style={S.app}><style>{CSS}</style>
+        <div style={{ ...S.wrap, display: "flex", flexDirection: "column", height: "100vh", maxHeight: "100dvh", padding: "16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0 10px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <img src={LOGO_PICCOLO} alt="" style={{ height: "26px", width: "auto" }} />
+              <div><div style={{ fontSize: "15px", fontWeight: 600 }}>{selectedScenario.title}</div><div style={{ fontSize: "12px", color: C.muted }}>Turno {turnCount}/{MAX_TURNS} · {di?.icon} {di?.label}</div></div>
             </div>
-            <button style={{ ...S.btn(C.danger), fontSize: "13px", padding: "8px 14px", flexShrink: 0, minHeight: "40px" }} onClick={genReport} disabled={conversation.length < 2}>Termina →</button>
+            <button style={{ ...S.btn(C.danger), fontSize: "13px", padding: "8px 14px" }} onClick={genReport} disabled={conversation.length < 2}>Termina →</button>
           </div>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "14px 0", overflow: "hidden" }}>
-            <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, viewport.w * 0.4)} />
+            <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, window.innerWidth * 0.4)} />
             <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{dispRoleAiShort}</div>
             <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>{isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : turnCount === 0 ? "In attesa..." : "In ascolto"}</div>
             {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{renderStyledText(lastAiText)}</div>}
@@ -1901,7 +1793,7 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
           </div>
           <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 0 4px", flexShrink: 0 }}>
             <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
-              {speechSupported && <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border }} onClick={() => setInputMode("voice")}>🎤 Voce</button>}
+              <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border, opacity: speechSupported ? 1 : 0.6 }} onClick={() => setInputMode("voice")} title={speechSupported ? "Modalità vocale" : "Il tuo browser non supporta il riconoscimento vocale — meglio Chrome/Edge desktop o Safari iOS recente"}>🎤 Voce</button>
               <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "text" ? `${C.accent}20` : "transparent", borderColor: inputMode === "text" ? C.accent : C.border }} onClick={() => setInputMode("text")}>⌨️ Testo</button>
             </div>
             {inputMode === "voice" ? (
@@ -1910,8 +1802,8 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
                   {Array.from({ length: 18 }).map((_, i) => <div key={i} style={{ width: "3px", borderRadius: "2px", background: isListening ? `linear-gradient(to top, ${C.danger}, ${C.accent})` : "rgba(42,26,14,0.06)", height: isListening ? undefined : "4px", animation: isListening ? "wave 1.2s ease-in-out infinite" : "none", animationDelay: `${i * 0.05}s` }} />)}
                 </div>
                 <div style={{ marginTop: "8px" }}>
-                  {!isListening ? <button aria-label="Avvia registrazione vocale" style={{ ...S.btn(C.accent), borderRadius: "50%", width: isMobile ? "64px" : "56px", height: isMobile ? "64px" : "56px", fontSize: "22px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={startListening} disabled={isThinking || isSpeaking}>🎤</button>
-                  : <button aria-label="Termina e invia" style={{ ...S.btn(C.danger), borderRadius: "50%", width: isMobile ? "64px" : "56px", height: isMobile ? "64px" : "56px", fontSize: "22px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s infinite" }} onClick={handleVoiceSend}>⏹</button>}
+                  {!isListening ? <button style={{ ...S.btn(C.accent), borderRadius: "50%", width: "56px", height: "56px", fontSize: "20px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={startListening} disabled={isThinking || isSpeaking}>🎤</button>
+                  : <button style={{ ...S.btn(C.danger), borderRadius: "50%", width: "56px", height: "56px", fontSize: "20px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s infinite" }} onClick={handleVoiceSend}>⏹</button>}
                 </div>
               </div>
             ) : (
@@ -1931,9 +1823,9 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     if (!selectedScenario) { setScreen("home"); return null; }
     const di = [...DIFF, ...DIFF_SL, ...DIFF_INF, ...DIFF_INGAGGIO].find(d => d.id === difficulty);
     return (
-      <div className="sf-app" style={S.app}><style>{CSS}</style>
+      <div style={S.app}><style>{CSS}</style>
         {showLB && <LBModal />}
-        <div className="sf-wrap" style={S.wrap}>
+        <div style={S.wrap}>
           {isGeneratingReport || !report ? (
             <div style={{ textAlign: "center", paddingTop: "120px" }}><div style={{ width: "48px", height: "48px", border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 24px" }} /><div style={{ fontSize: "18px", fontWeight: 600 }}>Analizzo...</div></div>
           ) : (
