@@ -2,6 +2,100 @@
 <html lang="it">
   <head>
     <meta charset="UTF-8" />
+
+    <!-- Viewport ottimizzato: viewport-fit=cover gestisce il notch iPhone -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+
+    <!-- Theme color (Android Chrome address bar, status bar) -->
+    <meta name="theme-color" content="#FAF7F3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#2A1A0E" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light" />
+
+    <!-- iOS Safari: web app installabile in home, status bar trasparente -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Skill Forge" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Disattiva il rilevamento automatico di numeri di telefono su iOS -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- SEO e social -->
+    <meta name="description" content="Allena le tue soft skills con simulazioni AI – Skill Forge by Alma Pratica" />
+
+    <title>Skill Forge — Alma Pratica</title>
+
+    <!-- Favicon emoji -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23FAF7F3'/><text y='75' x='50' text-anchor='middle' font-size='60'>🎯</text></svg>" />
+
+    <!-- Precarica i font (perf) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <style>
+      /* Reset base + comportamenti mobile-friendly globali */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #FAF7F3;
+        /* Disabilita il "tap highlight" blu/grigio su Android/iOS */
+        -webkit-tap-highlight-color: transparent;
+        /* Render tipografico più nitido su mobile */
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        /* Evita il rimbalzo elastico fastidioso a fine pagina su iOS */
+        overscroll-behavior-y: none;
+        /* Impedisce zoom involontario con doppio tap */
+        touch-action: manipulation;
+      }
+
+      /* Supporto a 100dvh (dynamic viewport) per iOS Safari:
+         100vh include la barra che appare/scompare e crea jump.
+         100dvh segue il viewport visibile. */
+      #root {
+        min-height: 100vh;
+        min-height: 100dvh;
+      }
+
+      /* I bottoni in iOS hanno un default Safari brutto: lo neutralizziamo */
+      button {
+        -webkit-appearance: none;
+        appearance: none;
+      }
+
+      /* Loader iniziale mentre carica React */
+      .boot-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #FAF7F3;
+      }
+      .boot-loader .ring {
+        width: 38px;
+        height: 38px;
+        border: 3px solid rgba(42, 26, 14, 0.1);
+        border-top-color: #D4622A;
+        border-radius: 50%;
+        animation: boot-spin 1s linear infinite;
+      }
+      @keyframes boot-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot-loader"><div class="ring"></div></div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html><!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Skill Forge — Alma Pratica</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>" />
