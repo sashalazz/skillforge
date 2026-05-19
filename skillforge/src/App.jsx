@@ -1053,13 +1053,21 @@ export default function App() {
   const audioRef = useRef(null);
   const convoRef = useRef([]);
   const sessionStartRef = useRef(null);
+  // ─── MediaRecorder fallback (per iOS Safari & altri browser senza Web Speech API)
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   useEffect(() => { convoRef.current = conversation; }, [conversation]);
 
   // ─── Init: check saved token ──────────────────────────────
   useEffect(() => {
-    const has = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-    setSpeechSupported(has); if (!has) setInputMode("text");
+    // Voice input is ALWAYS available: native Web Speech API on Chrome/Android,
+    // MediaRecorder + server-side Whisper fallback on iOS Safari and others.
+    const hasNative = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const hasMediaRecorder = typeof window.MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+    setSpeechSupported(hasNative || hasMediaRecorder);
     synthRef.current = window.speechSynthesis;
 
     const saved = localStorage.getItem("sf_token");
@@ -1241,19 +1249,6 @@ export default function App() {
     const NARRATOR_PITCH = 0.5;
     const NARRATOR_RATE = 0.78;
 
-    // ─── Voice selection by character gender ─────────────────
-    // Voce maschile italiana (ElevenLabs) per personaggi uomini.
-    // Per i personaggi femminili / neutri si usa la voce di default
-    // configurata lato server (process.env.ELEVENLABS_VOICE_ID).
-    const MALE_VOICE_ID = "mCXKh2XQAfLEHpvKU60w";
-    const MALE_CHARACTERS = new Set([
-      "Alessandro", "Andrea", "Davide", "Fabio", "Luca", "Marco",
-      "Massimo", "Paolo", "Riccardo", "Roberto", "Stefano",
-      "Dott. Martini", "Sig. Bianchi", "Sig. Ferrara", "Sig. Neri", "Sig. Verdi",
-    ]);
-    const isMaleCharacter = selectedScenario && MALE_CHARACTERS.has(selectedScenario.role_ai);
-    const dialogueVoiceId = isMaleCharacter ? MALE_VOICE_ID : undefined;
-
     // ElevenLabs TTS for dialogue parts
     const speakElevenLabs = (dialogueText) => {
       return new Promise(async (resolve) => {
@@ -1261,11 +1256,7 @@ export default function App() {
           const r = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              dialogueVoiceId
-                ? { text: dialogueText, voice_id: dialogueVoiceId }
-                : { text: dialogueText }
-            ),
+            body: JSON.stringify({ text: dialogueText }),
           });
           if (!r.ok) throw new Error("TTS request failed");
           const blob = await r.blob();
@@ -1320,17 +1311,155 @@ export default function App() {
       }
       setIsSpeaking(false);
     })();
-  }, [selectedScenario]);
+  }, []);
 
-  const startListening = useCallback(() => {
+  // ─── INPUT VOCALE: doppio percorso ─────────────────────────
+  //   1) Web Speech API (Chrome desktop, Android Chrome) → trascrizione live
+  //   2) MediaRecorder + /api/stt (iOS Safari, Firefox, ecc.) → trascrizione post-recording
+  const hasNativeSR = typeof window !== "undefined" && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const startListening = useCallback(async () => {
     if (!speechSupported) return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR(); rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = true; let f = "";
-    rec.onresult = e => { let i = ""; for (let j = e.resultIndex; j < e.results.length; j++) { if (e.results[j].isFinal) f += e.results[j][0].transcript + " "; else i += e.results[j][0].transcript; } setCurrentTranscript(f + i); };
-    rec.onerror = () => setIsListening(false); rec.onend = () => setIsListening(false);
-    recognitionRef.current = rec; rec.start(); setIsListening(true); setCurrentTranscript("");
-  }, [speechSupported]);
-  const stopListening = useCallback(() => { if (recognitionRef.current) recognitionRef.current.stop(); setIsListening(false); }, []);
+    setCurrentTranscript("");
+
+    if (hasNativeSR) {
+      // Path A: Web Speech API (trascrizione in tempo reale)
+      try {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = new SR();
+        rec.lang = "it-IT"; rec.interimResults = true; rec.continuous = true;
+        let f = "";
+        rec.onresult = e => {
+          let i = "";
+          for (let j = e.resultIndex; j < e.results.length; j++) {
+            if (e.results[j].isFinal) f += e.results[j][0].transcript + " ";
+            else i += e.results[j][0].transcript;
+          }
+          setCurrentTranscript(f + i);
+        };
+        rec.onerror = () => setIsListening(false);
+        rec.onend = () => setIsListening(false);
+        recognitionRef.current = rec;
+        rec.start();
+        setIsListening(true);
+        return;
+      } catch (err) {
+        console.warn("Native SpeechRecognition failed, falling back to MediaRecorder:", err);
+        // Fallthrough al path B
+      }
+    }
+
+    // Path B: MediaRecorder + Whisper server-side
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      // Scegli un mimeType supportato (iOS preferisce mp4, gli altri webm)
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/mp4;codecs=mp4a.40.2",
+        "audio/ogg;codecs=opus",
+        "",
+      ];
+      let mimeType = "";
+      for (const c of candidates) {
+        if (!c || (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c))) {
+          mimeType = c;
+          break;
+        }
+      }
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorderRef.current = mr;
+      mr.ondataavailable = e => { if (e.data && e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mr.start(250); // raccoglie chunk ogni 250ms
+      setIsListening(true);
+      setCurrentTranscript("🎙️ Registrazione in corso…");
+    } catch (err) {
+      console.error("Microphone access denied or unavailable:", err);
+      setIsListening(false);
+      setCurrentTranscript("");
+      alert("Impossibile accedere al microfono. Controlla i permessi del browser e riprova, oppure usa la modalità testo.");
+    }
+  }, [speechSupported, hasNativeSR]);
+
+  const stopListening = useCallback(() => {
+    // Path A
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+    }
+    // Path B
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      try { mr.stop(); } catch {}
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      mediaStreamRef.current = null;
+    }
+    setIsListening(false);
+  }, []);
+
+  // Trascrive l'audio raccolto (Path B) e ritorna il testo trascritto.
+  const transcribeRecording = useCallback(async () => {
+    const mr = mediaRecorderRef.current;
+    if (!mr) return "";
+    // Aspetta che il MediaRecorder abbia finito di sputare l'ultimo chunk
+    if (mr.state !== "inactive") {
+      await new Promise(resolve => {
+        mr.addEventListener("stop", resolve, { once: true });
+        try { mr.stop(); } catch { resolve(); }
+      });
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      mediaStreamRef.current = null;
+    }
+    const chunks = audioChunksRef.current;
+    audioChunksRef.current = [];
+    if (!chunks.length) return "";
+    const mimeType = mr.mimeType || "audio/webm";
+    const blob = new Blob(chunks, { type: mimeType });
+    // Blob → base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result || "";
+        const idx = String(result).indexOf(",");
+        resolve(idx >= 0 ? String(result).slice(idx + 1) : String(result));
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    try {
+      setIsTranscribing(true);
+      setCurrentTranscript("✍️ Trascrizione in corso…");
+      const r = await fetch("/api/stt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: base64, mimeType, language: "it" }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        console.error("STT failed:", data);
+        setCurrentTranscript("");
+        alert("Trascrizione fallita. Riprova o usa la modalità testo.");
+        return "";
+      }
+      const text = (data.text || "").trim();
+      setCurrentTranscript(text);
+      return text;
+    } catch (err) {
+      console.error("Transcription error:", err);
+      setCurrentTranscript("");
+      return "";
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, []);
 
   const genReportRef = useRef(null);
 
@@ -1395,33 +1524,58 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     }
   }, [selectedScenario, difficulty, speak, turnCount]);
 
-  const handleVoiceSend = useCallback(() => { stopListening(); setTimeout(() => handleSend(currentTranscript), 100); }, [stopListening, handleSend, currentTranscript]);
+  const handleVoiceSend = useCallback(async () => {
+    if (hasNativeSR && recognitionRef.current) {
+      // Path A: fermo il riconoscimento, currentTranscript è già il testo finale
+      try { recognitionRef.current.stop(); } catch {}
+      recognitionRef.current = null;
+      setIsListening(false);
+      setTimeout(() => handleSend(currentTranscript), 100);
+    } else {
+      // Path B: stop MediaRecorder, trascrivo, poi invio
+      setIsListening(false);
+      const text = await transcribeRecording();
+      if (text) handleSend(text);
+    }
+  }, [hasNativeSR, currentTranscript, handleSend, transcribeRecording]);
 
   const restart = () => { nav("home", () => { setConversation([]); setReport(null); setSelectedScenario(null); setSelectedCategory(null); setCurrentTranscript(""); setLastAiText(""); setTurnCount(0); setDifficulty("medium"); }); };
 
   // ─── STYLES ───────────────────────────────────────────────
   const S = {
-    app: { minHeight: "100vh", background: `radial-gradient(ellipse 80% 60% at 30% 20%, #EDE0D0 0%, ${C.bg2} 45%, ${C.bg1} 100%)`, fontFamily: "'DM Sans', sans-serif", color: C.text },
-    wrap: { maxWidth: "900px", margin: "0 auto", padding: "20px", position: "relative", zIndex: 1, opacity: animateIn ? 1 : 0, transform: animateIn ? "translateY(0)" : "translateY(20px)", transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)" },
+    app: { minHeight: "100vh", background: `radial-gradient(ellipse 80% 60% at 30% 20%, #EDE0D0 0%, ${C.bg2} 45%, ${C.bg1} 100%)`, fontFamily: "'DM Sans', sans-serif", color: C.text, WebkitTapHighlightColor: "transparent", WebkitTouchCallout: "none" },
+    wrap: { maxWidth: "900px", margin: "0 auto", padding: "clamp(12px, 3vw, 20px)", position: "relative", zIndex: 1, opacity: animateIn ? 1 : 0, transform: animateIn ? "translateY(0)" : "translateY(20px)", transition: "all 0.4s cubic-bezier(0.16,1,0.3,1)" },
     logo: { fontSize: "11px", letterSpacing: "6px", textTransform: "uppercase", color: C.muted },
-    h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, ${C.text} 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
-    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto" }),
-    btnO: { background: "transparent", color: C.accent, border: `1px solid ${C.accent}55`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'" },
+    h1: { fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,5vw,44px)", fontWeight: 700, lineHeight: 1.1, margin: 0, background: `linear-gradient(135deg, ${C.text} 0%, ${C.accent} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" },
+    btn: (c = C.accent, full = false) => ({ background: c, color: "#fff", border: "none", borderRadius: "12px", padding: full ? "16px 32px" : "12px 24px", fontSize: full ? "16px" : "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans'", transition: "all 0.2s", width: full ? "100%" : "auto", minHeight: "44px", touchAction: "manipulation" }),
+    btnO: { background: "transparent", color: C.accent, border: `1px solid ${C.accent}55`, borderRadius: "12px", padding: "12px 24px", fontSize: "14px", fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans'", minHeight: "40px", touchAction: "manipulation" },
     chip: (c) => ({ display: "inline-block", background: c + "20", color: c, padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: 600 }),
-    glass: { background: "rgba(255,248,240,0.75)", borderRadius: "16px", padding: "24px", border: `1px solid ${C.border}` },
-    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "14px", marginTop: "24px" },
-    input: { width: "100%", background: "rgba(255,255,255,0.92)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "15px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px" },
+    glass: { background: "rgba(255,248,240,0.75)", borderRadius: "16px", padding: "clamp(16px, 4vw, 24px)", border: `1px solid ${C.border}` },
+    grid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(250px, 100%), 1fr))", gap: "14px", marginTop: "24px" },
+    input: { width: "100%", background: "rgba(255,255,255,0.92)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 16px", color: C.text, fontSize: "16px", fontFamily: "'DM Sans'", outline: "none", marginBottom: "12px", minHeight: "48px" },
   };
 
   const CSS = `
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap');
-    *{box-sizing:border-box;margin:0;padding:0}body{margin:0;background:#FAF7F3;}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{margin:0;background:#FAF7F3;-webkit-text-size-adjust:100%;}
+    body{overscroll-behavior-y:contain;}
+    button{font-family:'DM Sans',sans-serif;-webkit-tap-highlight-color:transparent;}
+    input,textarea,select{font-size:16px !important;} /* prevents iOS zoom on focus */
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(42,26,14,0.08);border-radius:3px}
     @keyframes pulseGlow{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
     @keyframes blink{0%,40%,100%{ry:11}45%,55%{ry:1}}
     @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes wave{0%,100%{height:6px}50%{height:28px}}
+    @media (max-width: 600px) {
+      .sf-hide-mobile{display:none !important;}
+      .sf-stack-mobile{flex-direction:column !important;align-items:stretch !important;}
+      .sf-stack-mobile > *{width:100%;}
+    }
+    @supports (height: 100dvh) {
+      .sf-fullh{height:100dvh !important;max-height:100dvh !important;}
+    }
   `;
 
   // ─── LEADERBOARD MODAL ────────────────────────────────────
@@ -1737,13 +1891,13 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "8px" }}>Scenario</div>
             <p style={{ fontSize: "15px", lineHeight: 1.7, color: "rgba(42,26,14,0.65)" }}>{dispBrief}</p>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", marginTop: "12px" }}>
             <div style={{ background: `${C.accent}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.accent}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Il tuo ruolo</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{dispRoleUser}</div></div>
             <div style={{ background: `${C.teal}12`, borderRadius: "12px", padding: "14px", border: `1px solid ${C.teal}25` }}><div style={{ fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", color: C.muted, marginBottom: "6px" }}>Parli con</div><div style={{ fontSize: "14px", fontWeight: 600 }}>{dispRoleAi}</div></div>
           </div>
           <div style={{ marginTop: "18px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "3px", textTransform: "uppercase", color: C.muted, marginBottom: "10px" }}>{getDiffLabel(cat?.id, selectedScenario?.id)}</div>
-            <div style={{ display: "grid", gridTemplateColumns: getDiffOptions(cat?.id, selectedScenario?.id).length >= 5 ? "1fr 1fr 1fr" : getDiffOptions(cat?.id, selectedScenario?.id).length === 4 ? "1fr 1fr" : "1fr 1fr 1fr", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))", gap: "8px" }}>
               {getDiffOptions(cat?.id, selectedScenario?.id).map(d => (
                 <div key={d.id} onClick={() => setDifficulty(d.id)} style={{ background: difficulty === d.id ? `${d.color}18` : C.glass, border: `2px solid ${difficulty === d.id ? d.color : C.border}`, borderRadius: "12px", padding: "14px", cursor: "pointer", textAlign: "center", transition: "all 0.2s", transform: difficulty === d.id ? "scale(1.03)" : "scale(1)" }}>
                   <div style={{ fontSize: "22px", marginBottom: "4px" }}>{d.icon}</div>
@@ -1786,43 +1940,121 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     const infVar = INF_SCENARIOS.includes(selectedScenario?.id) ? getInfVariant(difficulty) : null;
     const dispRoleAiShort = infVar ? infVar.role_ai : selectedScenario.role_ai;
     const dispRoleUser = infVar ? infVar.role_user : selectedScenario.role_user;
+    const isVoiceBusy = isThinking || isSpeaking || isTranscribing;
     return (
       <div style={S.app}><style>{CSS}</style>
-        <div style={{ ...S.wrap, display: "flex", flexDirection: "column", height: "100vh", maxHeight: "100dvh", padding: "16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0 10px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <img src={LOGO_PICCOLO} alt="" style={{ height: "26px", width: "auto" }} />
-              <div><div style={{ fontSize: "15px", fontWeight: 600 }}>{selectedScenario.title}</div><div style={{ fontSize: "12px", color: C.muted }}>Turno {turnCount}/{MAX_TURNS} · {di?.icon} {di?.label}</div></div>
+        <div className="sf-fullh" style={{
+          ...S.wrap,
+          display: "flex",
+          flexDirection: "column",
+          height: "100vh",
+          maxHeight: "100vh",
+          padding: "max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))",
+        }}>
+          {/* HEADER */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 8px", borderBottom: `1px solid ${C.border}`, flexShrink: 0, gap: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+              <img src={LOGO_PICCOLO} alt="" style={{ height: "24px", width: "auto", flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: "14px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{selectedScenario.title}</div>
+                <div style={{ fontSize: "11px", color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Turno {turnCount}/{MAX_TURNS} · {di?.icon} {di?.label}</div>
+              </div>
             </div>
-            <button style={{ ...S.btn(C.danger), fontSize: "13px", padding: "8px 14px" }} onClick={genReport} disabled={conversation.length < 2}>Termina →</button>
+            <button style={{ ...S.btn(C.danger), fontSize: "13px", padding: "10px 14px", flexShrink: 0, minHeight: "40px" }} onClick={genReport} disabled={conversation.length < 2}>Termina</button>
           </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "14px 0", overflow: "hidden" }}>
-            <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(180, window.innerWidth * 0.4)} />
-            <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "16px" }}>{dispRoleAiShort}</div>
-            <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>{isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : turnCount === 0 ? "In attesa..." : "In ascolto"}</div>
-            {lastAiText && <div style={{ marginTop: "16px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.7, color: "rgba(42,26,14,0.6)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "100px", overflowY: "auto" }}>{renderStyledText(lastAiText)}</div>}
-            {currentTranscript && <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(42,26,14,0.5)", fontStyle: "italic", textAlign: "center" }}>{currentTranscript}</div>}
-            {turnCount === 0 && !currentTranscript && <div style={{ marginTop: "12px", fontSize: "13px", color: "rgba(42,26,14,0.2)", textAlign: "center" }}>Inizia come <span style={{ color: `${C.accent}88` }}>{dispRoleUser}</span></div>}
-          </div>
-          <div style={{ borderTop: `1px solid ${C.border}`, padding: "10px 0 4px", flexShrink: 0 }}>
-            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "8px" }}>
-              {speechSupported && <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border }} onClick={() => setInputMode("voice")}>🎤 Voce</button>}
-              <button style={{ ...S.btnO, padding: "5px 12px", fontSize: "12px", background: inputMode === "text" ? `${C.accent}20` : "transparent", borderColor: inputMode === "text" ? C.accent : C.border }} onClick={() => setInputMode("text")}>⌨️ Testo</button>
+
+          {/* AVATAR + DIALOGO */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "10px 0", overflow: "hidden", minHeight: 0 }}>
+            <Avatar speaking={isSpeaking} thinking={isThinking} size={Math.min(160, Math.max(110, window.innerWidth * 0.32))} />
+            <div style={{ fontSize: "15px", fontWeight: 600, marginTop: "12px", textAlign: "center", padding: "0 8px" }}>{dispRoleAiShort}</div>
+            <div style={{ fontSize: "12px", color: C.muted, marginTop: "3px", height: "16px" }}>
+              {isThinking ? "Sta pensando..." : isSpeaking ? "Sta parlando..." : isTranscribing ? "Sto trascrivendo..." : isListening ? "Ti sto ascoltando..." : turnCount === 0 ? "In attesa..." : "Tocca a te"}
             </div>
+            {lastAiText && (
+              <div style={{ marginTop: "12px", maxWidth: "480px", width: "100%", background: C.glass, borderRadius: "14px", padding: "12px 16px", fontSize: "14px", lineHeight: 1.6, color: "rgba(42,26,14,0.7)", textAlign: "center", border: `1px solid ${C.border}`, maxHeight: "90px", overflowY: "auto" }}>
+                {renderStyledText(lastAiText)}
+              </div>
+            )}
+            {currentTranscript && (
+              <div style={{ marginTop: "8px", maxWidth: "480px", width: "100%", background: `${C.accent}12`, borderRadius: "10px", padding: "10px 14px", fontSize: "13px", color: "rgba(42,26,14,0.65)", fontStyle: "italic", textAlign: "center" }}>
+                {currentTranscript}
+              </div>
+            )}
+            {turnCount === 0 && !currentTranscript && (
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "rgba(42,26,14,0.35)", textAlign: "center", padding: "0 10px" }}>
+                Inizia come <span style={{ color: `${C.accent}` }}>{dispRoleUser}</span>
+              </div>
+            )}
+          </div>
+
+          {/* INPUT BAR */}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "10px", flexShrink: 0 }}>
+            {/* Toggle Voce / Testo */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "10px" }}>
+              {speechSupported && (
+                <button
+                  style={{ ...S.btnO, padding: "8px 16px", fontSize: "13px", minHeight: "38px", background: inputMode === "voice" ? `${C.accent}20` : "transparent", borderColor: inputMode === "voice" ? C.accent : C.border, color: inputMode === "voice" ? C.accent : C.muted }}
+                  onClick={() => { if (isListening) stopListening(); setInputMode("voice"); }}
+                >🎤 Voce</button>
+              )}
+              <button
+                style={{ ...S.btnO, padding: "8px 16px", fontSize: "13px", minHeight: "38px", background: inputMode === "text" ? `${C.accent}20` : "transparent", borderColor: inputMode === "text" ? C.accent : C.border, color: inputMode === "text" ? C.accent : C.muted }}
+                onClick={() => { if (isListening) stopListening(); setInputMode("text"); }}
+              >⌨️ Testo</button>
+            </div>
+
             {inputMode === "voice" ? (
               <div style={{ textAlign: "center" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "2px", height: "28px" }}>
-                  {Array.from({ length: 18 }).map((_, i) => <div key={i} style={{ width: "3px", borderRadius: "2px", background: isListening ? `linear-gradient(to top, ${C.danger}, ${C.accent})` : "rgba(42,26,14,0.06)", height: isListening ? undefined : "4px", animation: isListening ? "wave 1.2s ease-in-out infinite" : "none", animationDelay: `${i * 0.05}s` }} />)}
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <div key={i} style={{
+                      width: "3px", borderRadius: "2px",
+                      background: isListening ? `linear-gradient(to top, ${C.danger}, ${C.accent})` : "rgba(42,26,14,0.06)",
+                      height: isListening ? undefined : "4px",
+                      animation: isListening ? "wave 1.2s ease-in-out infinite" : "none",
+                      animationDelay: `${i * 0.05}s`,
+                    }} />
+                  ))}
                 </div>
-                <div style={{ marginTop: "8px" }}>
-                  {!isListening ? <button style={{ ...S.btn(C.accent), borderRadius: "50%", width: "56px", height: "56px", fontSize: "20px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center" }} onClick={startListening} disabled={isThinking || isSpeaking}>🎤</button>
-                  : <button style={{ ...S.btn(C.danger), borderRadius: "50%", width: "56px", height: "56px", fontSize: "20px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s infinite" }} onClick={handleVoiceSend}>⏹</button>}
+                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
+                  {!isListening ? (
+                    <button
+                      style={{ ...S.btn(C.accent), borderRadius: "50%", width: "68px", height: "68px", fontSize: "26px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: `0 6px 20px ${C.accent}44`, opacity: isVoiceBusy ? 0.5 : 1 }}
+                      onClick={startListening}
+                      disabled={isVoiceBusy}
+                    >🎤</button>
+                  ) : (
+                    <button
+                      style={{ ...S.btn(C.danger), borderRadius: "50%", width: "68px", height: "68px", fontSize: "26px", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", animation: "pulse 1.5s infinite", boxShadow: `0 6px 20px ${C.danger}55` }}
+                      onClick={handleVoiceSend}
+                    >⏹</button>
+                  )}
+                </div>
+                <div style={{ marginTop: "6px", fontSize: "11px", color: C.muted, minHeight: "14px" }}>
+                  {isTranscribing ? "Sto convertendo la voce in testo…" :
+                   isListening ? (hasNativeSR ? "Tocca ⏹ per inviare" : "Tocca ⏹ quando hai finito") :
+                   isVoiceBusy ? "" : "Tocca il microfono per parlare"}
                 </div>
               </div>
             ) : (
               <div style={{ display: "flex", gap: "8px" }}>
-                <input type="text" value={userTextInput} onChange={e => setUserTextInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter") handleSend(userTextInput); }} placeholder="Scrivi..." style={{ ...S.input, marginBottom: 0, flex: 1 }} disabled={isThinking} />
-                <button style={S.btn(C.accent)} onClick={() => handleSend(userTextInput)} disabled={!userTextInput.trim() || isThinking}>Invia</button>
+                <input
+                  type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCorrect="on"
+                  value={userTextInput}
+                  onChange={e => setUserTextInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") handleSend(userTextInput); }}
+                  placeholder="Scrivi..."
+                  style={{ ...S.input, marginBottom: 0, flex: 1, minWidth: 0 }}
+                  disabled={isThinking}
+                />
+                <button
+                  style={{ ...S.btn(C.accent), padding: "12px 20px", flexShrink: 0 }}
+                  onClick={() => handleSend(userTextInput)}
+                  disabled={!userTextInput.trim() || isThinking}
+                >Invia</button>
               </div>
             )}
           </div>
