@@ -1226,7 +1226,49 @@ export default function App() {
     });
   }, [parseStageDirections]);
 
-  const speak = useCallback((text) => {
+  // ─── Inferenza del genere dal ruolo AI ───────────────────
+  // Restituisce "F" o "M" (default M). Priorità:
+  //   1) campo gender esplicito nello scenario (se presente)
+  //   2) titoli onorifici (Dott.ssa, Sig.ra, Prof.ssa, ecc.)
+  //   3) nomi italiani comuni
+  //   4) default → "M"
+  const inferGender = useCallback((scenario, infVariant) => {
+    if (!scenario) return "M";
+    // 1) Override esplicito (puoi aggiungere `gender: "F"` nello scenario o nella variante INF)
+    if (infVariant?.gender === "F" || infVariant?.gender === "M") return infVariant.gender;
+    if (scenario.gender === "F" || scenario.gender === "M") return scenario.gender;
+
+    // Sorgenti da cui dedurre
+    const candidates = [
+      infVariant?.role_ai, infVariant?.role_ai_full,
+      scenario.role_ai, scenario.role_ai_full,
+    ].filter(Boolean).join(" ").toLowerCase();
+    if (!candidates) return "M";
+
+    // 2) Titoli espliciti
+    const femaleTitles = /\b(sig\.?ra|signora|dott\.?ssa|dottoressa|prof\.?ssa|professoressa|direttrice|presidente[ssa]*|ingegnera|avvocatessa|architetta)\b/i;
+    if (femaleTitles.test(candidates)) return "F";
+    const maleTitles = /\b(sig\.?|signor|dott\.?|dottor|dottore|prof\.?|professore|direttore|presidente|ingegnere|avvocato|architetto)\b/i;
+    if (maleTitles.test(candidates)) return "M";
+
+    // 3) Nomi italiani femminili comuni (lista pragmatica, non esaustiva)
+    const femaleNames = [
+      "anna","alessia","alessandra","antonella","arianna","barbara","beatrice","bianca","camilla","carla","carlotta","caterina","cecilia","chiara","clara","claudia","cristina","daniela","debora","diana","elena","eleonora","elisa","elisabetta","emanuela","emma","erica","ester","eva","federica","fiorella","francesca","gabriella","gaia","gemma","gilda","gina","giada","gioia","giorgia","giovanna","giulia","giuliana","grazia","greta","ilaria","ines","irene","isabella","jessica","laura","letizia","lia","licia","lidia","linda","lisa","livia","loredana","lorena","lucia","luciana","ludovica","luisa","maddalena","manuela","mara","marcella","margherita","maria","marianna","marina","marisa","marta","martina","matilde","melissa","michela","milena","mirella","monica","nadia","natalia","nicoletta","nora","olga","ornella","paola","patrizia","piera","raffaella","rebecca","rita","roberta","romina","rosa","rosanna","rossana","rossella","sabrina","samanta","sandra","sara","serena","silvia","simona","sofia","sonia","stefania","susanna","teresa","tiziana","valentina","valeria","veronica","viola","vittoria","viviana","yara","zaira"
+    ];
+    // Nomi maschili comuni — utili per disambiguare ed evitare falsi positivi sui femminili
+    const maleNames = [
+      "alberto","alessandro","alessio","alfredo","andrea","angelo","antonio","armando","arturo","aurelio","bruno","carlo","christian","claudio","corrado","cosimo","cristiano","daniele","dario","davide","diego","domenico","edoardo","elia","emanuele","emilio","enrico","enzo","ettore","fabio","fabrizio","federico","felice","ferdinando","filippo","flavio","francesco","franco","gabriele","gaetano","gennaro","giacomo","giampaolo","gianluca","gianni","giorgio","giovanni","giulio","giuseppe","graziano","gregorio","guido","ivan","jacopo","leonardo","lino","lorenzo","luca","luciano","luigi","manuel","marco","mario","massimiliano","massimo","matteo","maurizio","mauro","michele","mirko","moreno","natale","nicola","nicolò","oreste","oscar","osvaldo","paolo","pasquale","patrizio","piero","pietro","raffaele","remo","renato","renzo","riccardo","roberto","rocco","romano","rosario","ruggero","salvatore","samuele","santo","saverio","sebastiano","sergio","silvano","silvio","simone","stefano","tommaso","ugo","umberto","valerio","vincenzo","vito","vittorio","walter"
+    ];
+    // Cerca un match esatto (parola intera)
+    const tokens = candidates.split(/[^a-zàèéìòù]+/i).filter(Boolean);
+    for (const t of tokens) {
+      if (femaleNames.includes(t)) return "F";
+      if (maleNames.includes(t)) return "M";
+    }
+    return "M";
+  }, []);
+
+  const speak = useCallback((text, gender = "M") => {
     const parts = [];
     const regex = /\*([^*]+)\*/g;
     let lastIndex = 0;
@@ -1245,35 +1287,46 @@ export default function App() {
     }
     if (parts.length === 0) parts.push({ type: "dialogue", text: text });
 
-    // Narrator voice settings (browser TTS fallback for stage directions)
-    const NARRATOR_PITCH = 0.5;
-    const NARRATOR_RATE = 0.78;
-
-    // ElevenLabs TTS for dialogue parts
-    const speakElevenLabs = (dialogueText) => {
+    // Helper: chiama /api/tts con un ruolo specifico ("avatar" o "narrator")
+    // Il narratore ignora il genere (resta sempre maschile neutro, "Adam").
+    // L'avatar usa il genere per scegliere voce M o F.
+    const speakTTS = (textPart, role) => {
       return new Promise(async (resolve) => {
         try {
+          const payload = { text: textPart, role };
+          if (role === "avatar") payload.gender = gender; // "M" o "F"
           const r = await fetch("/api/tts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: dialogueText }),
+            body: JSON.stringify(payload),
           });
           if (!r.ok) throw new Error("TTS request failed");
           const blob = await r.blob();
           const url = URL.createObjectURL(blob);
           const audio = new Audio(url);
+          // Velocità di riproduzione: narratore leggermente più lento per tono "da documentario"
+          audio.playbackRate = role === "narrator" ? 0.95 : 1.0;
           audioRef.current = audio;
           audio.onplay = () => setIsSpeaking(true);
           audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
           audio.onerror = () => { URL.revokeObjectURL(url); resolve(); };
           audio.play().catch(() => resolve());
         } catch {
-          // Fallback to browser TTS if ElevenLabs fails
+          // Fallback ultima istanza: browser TTS (se ElevenLabs non risponde)
           if (synthRef.current) {
-            const u = new SpeechSynthesisUtterance(dialogueText);
-            u.lang = "it-IT"; u.rate = 1.15; u.pitch = 1.0;
-            const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
-            if (v) u.voice = v;
+            const u = new SpeechSynthesisUtterance(textPart);
+            u.lang = "it-IT";
+            if (role === "narrator") { u.rate = 0.92; u.pitch = 0.85; }
+            else { u.rate = 1.05; u.pitch = gender === "F" ? 1.25 : 1.0; }
+            const candidates = synthRef.current.getVoices().filter(v => v.lang.startsWith("it"));
+            // Prova a scegliere una voce coerente col genere
+            const preferred = candidates.find(v => {
+              const n = (v.name || "").toLowerCase();
+              if (gender === "F") return /female|donna|alice|elsa|paola|federica|luisa|isabella/.test(n);
+              return /male|uomo|alessandro|luca|paolo|fabio|carlo|enzo|giovanni|francesco|maurizio/.test(n);
+            });
+            if (preferred) u.voice = preferred;
+            else if (candidates[0]) u.voice = candidates[0];
             u.onstart = () => setIsSpeaking(true);
             u.onend = () => resolve();
             u.onerror = () => resolve();
@@ -1283,19 +1336,8 @@ export default function App() {
       });
     };
 
-    // Browser TTS for stage directions (narrator voice)
-    const speakNarrator = (stageText) => {
-      return new Promise((resolve) => {
-        if (!synthRef.current) { resolve(); return; }
-        const u = new SpeechSynthesisUtterance(stageText);
-        u.lang = "it-IT"; u.rate = NARRATOR_RATE; u.pitch = NARRATOR_PITCH;
-        const v = synthRef.current.getVoices().find(v => v.lang.startsWith("it"));
-        if (v) u.voice = v;
-        u.onend = () => resolve();
-        u.onerror = () => resolve();
-        synthRef.current.speak(u);
-      });
-    };
+    const speakElevenLabs  = (t) => speakTTS(t, "avatar");
+    const speakNarrator    = (t) => speakTTS(t, "narrator");
 
     // Sequential playback of all parts
     return (async () => {
@@ -1516,13 +1558,17 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. N
     
     setConversation(prev => [...prev, { role: "ai", text: aiText }]);
     setLastAiText(aiText); setTurnCount(newTurn); setIsThinking(false);
-    
-    await speak(aiText);
+
+    // Inferisce il genere del personaggio AI dal ruolo per scegliere la voce
+    const infVar = INF_SCENARIOS.includes(selectedScenario?.id) ? getInfVariant(difficulty) : null;
+    const gender = inferGender(selectedScenario, infVar);
+
+    await speak(aiText, gender);
     
     if (newTurn >= MAX_TURNS) {
       setTimeout(() => { if (genReportRef.current) genReportRef.current(); }, 500);
     }
-  }, [selectedScenario, difficulty, speak, turnCount]);
+  }, [selectedScenario, difficulty, speak, turnCount, inferGender]);
 
   const handleVoiceSend = useCallback(async () => {
     if (hasNativeSR && recognitionRef.current) {
